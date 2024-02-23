@@ -1,0 +1,103 @@
+---
+# Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Labels for action/labeler
+
+######################################
+# Label area/xxx
+
+area/kubernetes:
+- changed-files:
+  - any-glob-to-any-file: kubernetes/**
+
+area/github:
+- changed-files:
+  - any-glob-to-any-file: .github/**
+
+
+######################################
+# Label cloud/xxx
+
+cloud/alicloud:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/alicloud/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/alicloud/**/*
+  - any-glob-to-any-file: gitops/argocd/alicloud/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-alicloud-*.yaml
+
+cloud/aws:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/aws/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/aws/**/*
+  - any-glob-to-any-file: gitops/argocd/aws/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-aws-*.yaml
+
+cloud/azure:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/azure/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/azure/**/*
+  - any-glob-to-any-file: gitops/argocd/azure/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-azure-*.yaml
+
+cloud/civo:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/civo/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/civo/**/*
+  - any-glob-to-any-file: gitops/argocd/civo/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-civo-*.yaml
+
+cloud/digitalocean:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/digitalocean/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/digitalocean/**/*
+  - any-glob-to-any-file: gitops/argocd/digitalocean/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-digitalocean-*.yaml
+
+cloud/exoscale:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/exoscale/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/exoscale/**/*
+  - any-glob-to-any-file: gitops/argocd/exoscale/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-exoscale-*.yaml
+
+cloud/gcp:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/gcp/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/gcp/**/*
+  - any-glob-to-any-file: gitops/argocd/gcp/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-gcp-*.yaml
+
+cloud/ibmcloud:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/ibmcloud/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/ibmcloud/**/*
+  - any-glob-to-any-file: gitops/argocd/ibmcloud/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-ibmcloud-*.yaml
+
+cloud/scaleway:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/scaleway/**/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/scaleway/**/*
+  - any-glob-to-any-file: gitops/argocd/scaleway/**/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-scaleway-*.yaml
+
+cloud/homelab:
+- changed-files:
+  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/k3s/homelab/*
+  - any-glob-to-any-file: gitops/fluxcd/clusters/k3s/homelab/*
+  - any-glob-to-any-file: gitops/argocd/k3s/homelab/*
+  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-k3s-homelab.yaml
