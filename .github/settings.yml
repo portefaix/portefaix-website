@@ -89,8 +89,8 @@ labels:
 
 ## AREA
 
-- name: "area/kubernetes"
-  description: "Kubernetes"
+- name: "area/website"
+  description: "Website"
   color: "cc317c"
 
 - name: "area/docsy"

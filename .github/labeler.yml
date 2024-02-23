@@ -20,84 +20,56 @@
 ######################################
 # Label area/xxx
 
-area/kubernetes:
+area/website:
 - changed-files:
-  - any-glob-to-any-file: kubernetes/**
+  - any-glob-to-any-file: content/**/*
+  - any-glob-to-any-file: netlify.toml
 
-area/github:
+area/docsy:
 - changed-files:
-  - any-glob-to-any-file: .github/**
-
+  - any-glob-to-any-file: hugo.toml
+  - any-glob-to-any-file: config.yaml
+  - any-glob-to-any-file: go.mod
 
 ######################################
 # Label cloud/xxx
 
 cloud/alicloud:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/alicloud/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/alicloud/**/*
-  - any-glob-to-any-file: gitops/argocd/alicloud/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-alicloud-*.yaml
+  - any-glob-to-any-file: content/en/docs/alicloud/**/*
 
 cloud/aws:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/aws/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/aws/**/*
-  - any-glob-to-any-file: gitops/argocd/aws/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-aws-*.yaml
+  - any-glob-to-any-file: content/en/docs/aws/**/*
 
 cloud/azure:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/azure/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/azure/**/*
-  - any-glob-to-any-file: gitops/argocd/azure/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-azure-*.yaml
+  - any-glob-to-any-file: content/en/docs/azure/**/*
 
 cloud/civo:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/civo/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/civo/**/*
-  - any-glob-to-any-file: gitops/argocd/civo/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-civo-*.yaml
+  - any-glob-to-any-file: content/en/docs/civo/**/*
 
 cloud/digitalocean:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/digitalocean/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/digitalocean/**/*
-  - any-glob-to-any-file: gitops/argocd/digitalocean/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-digitalocean-*.yaml
+  - any-glob-to-any-file: content/en/docs/digitalocean/**/*
 
 cloud/exoscale:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/exoscale/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/exoscale/**/*
-  - any-glob-to-any-file: gitops/argocd/exoscale/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-exoscale-*.yaml
+  - any-glob-to-any-file: content/en/docs/exoscale/**/*
 
 cloud/gcp:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/gcp/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/gcp/**/*
-  - any-glob-to-any-file: gitops/argocd/gcp/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-gcp-*.yaml
+  - any-glob-to-any-file: content/en/docs/gcp/**/*
 
 cloud/ibmcloud:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/ibmcloud/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/ibmcloud/**/*
-  - any-glob-to-any-file: gitops/argocd/ibmcloud/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-ibmcloud-*.yaml
+  - any-glob-to-any-file: content/en/docs/ibmcloud/**/*
 
 cloud/scaleway:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/scaleway/**/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/scaleway/**/*
-  - any-glob-to-any-file: gitops/argocd/scaleway/**/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-scaleway-*.yaml
+  - any-glob-to-any-file: content/en/docs/scaleway/**/*
 
 cloud/homelab:
 - changed-files:
-  - any-glob-to-any-file: gitops/fluxcd/kubernetes/overlays/k3s/homelab/*
-  - any-glob-to-any-file: gitops/fluxcd/clusters/k3s/homelab/*
-  - any-glob-to-any-file: gitops/argocd/k3s/homelab/*
-  - any-glob-to-any-file: gitops/argocd/charts/**/**/values-k3s-homelab.yaml
+  - any-glob-to-any-file: content/en/docs/homelab/*
