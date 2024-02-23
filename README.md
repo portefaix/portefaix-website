@@ -14,7 +14,7 @@ $ hugo mod graph
 
 For Docsy documentation, see [Docsy user guide][].
 
-This Portefaix Website is hosted on [Netlify][] at [portefaix.xyz][https://portefaix.xyz].
+This Portefaix Website is hosted on [Netlify][] at [portefaix.xyz](https://portefaix.xyz).
 
 ## Running the website locally
 
