@@ -1,6 +1,10 @@
 ---
 title: Community
-menu: {main: {weight: 40}}
+menu: { main: { weight: 40 } }
+cascade:
+  type: docs
 ---
 
-<!--add blocks of content here to add more sections to the community page -->
+## Develop and Contribute
+
+- [<i class="fab fa-github"></i> Github](https://github.com/portefaix/): Portefaix organization
