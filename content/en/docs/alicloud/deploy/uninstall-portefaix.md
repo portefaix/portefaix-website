@@ -8,4 +8,4 @@ weight = 30
 
 [Github Actions](https://github.com/features/actions) with [Terraform Cloud](https://www.terraform.io/cloud) could be used to delete the infrastructure:
 
-<img src="/docs/images/portefaix-alicloud-undeploy.png" alt="Portefaix Azure deletion" class="mt-3 mb-3 rounded">
+<img src="/img/alicloud/portefaix-alicloud-undeploy.png" alt="Portefaix Azure deletion" class="mt-3 mb-3 rounded">

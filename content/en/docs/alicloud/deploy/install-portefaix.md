@@ -51,7 +51,7 @@ Create a TableStore instance:
 
 [Terraform Cloud](https://terraform.cloud) is used as the remote backend. [Github Actions](https://github.com/features/actions) perform tasks to deploy the Alibaba Cloud infrastructure.
 
-<img src="/docs/images/portefaix-alicloud-deploy.png" alt="Portefaix Alibaba Cloud deployment" class="mt-3 mb-3 rounded">
+<img src="/img/alicloud/portefaix-alicloud-deploy.png" alt="Portefaix Alibaba Cloud deployment" class="mt-3 mb-3 rounded">
 
 <a id="alicloud-gitops"></a>
 

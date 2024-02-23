@@ -4,7 +4,7 @@ description = "Gitops model for Kubernetes using ArgoCD"
 weight = 20
 
 +++
-<img src="/docs/images/argocd_architecture.png" alt="Argo-CD" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/argo/argocd_architecture.png" alt="Argo-CD" class="mt-3 mb-3 border border-info rounded">
 
 ## Organization
 
@@ -44,7 +44,7 @@ Stacks:
 * Chaos
 * Tools
 
-<img src="argocd_stacks.png" alt="Argo-CD Stacks" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/argo/argocd_stacks.png" alt="Argo-CD Stacks" class="mt-3 mb-3 border border-info rounded">
 
 You can list stack installed:
 
@@ -58,9 +58,9 @@ system  argocd          1               2022-06-08 07:41:21.749647011 +0200 CEST
 
 Argo-CD applications installs others Argo-CD applications:
 
-<img src="argocd_app_observability.png" alt="Argo-CD Observability" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/argo/argocd_app_observability.png" alt="Argo-CD Observability" class="mt-3 mb-3 border border-info rounded">
 
-<img src="argocd_app_grafana.png" alt="Argo-CD Grafana" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/argo/argocd_app_grafana.png" alt="Argo-CD Grafana" class="mt-3 mb-3 border border-info rounded">
 
 Go to Argo-CD dashboard, you will see Argo-CD corresponding applications.
 

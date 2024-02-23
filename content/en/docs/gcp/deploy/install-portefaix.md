@@ -100,7 +100,7 @@ Configure Terraform Cloud workspaces:
 ❯ make terraform-apply SERVICE=terraform/gcp/terraform-cloud ENV=main
 ```
 
-<img src="/docs/images/portefaix-gcp-deploy.png" alt="Portefaix GCP deployment" class="mt-3 mb-3 rounded">
+<img src="/img/gcp/portefaix-gcp-deploy.png" alt="Portefaix GCP deployment" class="mt-3 mb-3 rounded">
 
 <a id="gcp-gitops"></a>
 

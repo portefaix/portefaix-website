@@ -5,9 +5,9 @@ weight = 10
 
 +++
 
-[Gitops](https://www.weave.works/technologies/gitops/) model used is [Flux v2](https://toolkit.fluxcd.io/)
+[Gitops](https://www.gitops.tech/) model used is [Flux v2](https://toolkit.fluxcd.io/)
 
-<img src="/docs/images/gitops-toolkit.png"
+<img src="/img/flux/gitops-toolkit.png"
  alt="Flux v2"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -58,11 +58,11 @@ prometheus-operator-mixin       monitoring      1               2022-08-08 10:57
 weawe-gitops                    flux-system     1               2022-08-08 07:49:32.97390968 +0000 UTC  deployed        weave-gitops-2.2.5              v0.9.1
 ```
 
-<img src="/docs/images/fluxcd-applications.png" alt="Flux-CD Applications" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/flux/fluxcd-applications.png" alt="Flux-CD Applications" class="mt-3 mb-3 border border-info rounded">
 
-<img src="/docs/images/fluxcd-kustomization-details.png" alt="Details" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/flux/fluxcd-kustomization-details.png" alt="Details" class="mt-3 mb-3 border border-info rounded">
 
-<img src="/docs/images/fluxcd-kustomization-graph.png" alt="Graph" class="mt-3 mb-3 border border-info rounded">
+<img src="/img/flux/fluxcd-kustomization-graph.png" alt="Graph" class="mt-3 mb-3 border border-info rounded">
 
 
 ## Secrets

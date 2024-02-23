@@ -45,7 +45,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk inspec-test SERVICE=iac/gcp/vpc ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-vpc.png"
+<img src="/img/gcp/inspec-gcp-vpc.png"
  alt="VPC"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -60,7 +60,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk gcp-inspec-test SERVICE=iac/gcp/gke ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-gke.png"
+<img src="/img/gcp/inspec-gcp-gke.png"
  alt="GKE"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -84,7 +84,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk gcp-inspec-test SERVICE=iac/gcp/sops ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-sops.png"
+<img src="/img/gcp/inspec-gcp-sops.png"
  alt="Sops"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -99,7 +99,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk gcp-inspec-test SERVICE=iac/gcp/observability ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-observability.png"
+<img src="/img/gcp/inspec-gcp-observability.png"
  alt="Observability"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -123,7 +123,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk gcp-inspec-test SERVICE=iac/gcp/velero ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-velero.png"
+<img src="/img/gcp/inspec-gcp-velero.png"
  alt="Velero"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -139,7 +139,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk gcp-inspec-test SERVICE=iac/gcp/vector ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-vector.png"
+<img src="/img/gcp/inspec-gcp-vector.png"
  alt="Vector"
  class="mt-3 mb-3 border border-info rounded">
 
@@ -155,7 +155,7 @@ You could perform tests accoring the [GCP CIS](https://opensource.googleblog.com
 ❯ make -f hack/build/gcp.mk gcp-inspec-test SERVICE=iac/gcp/external-dns ENV=dev
 ```
 
-<img src="/docs/images/inspec-gcp-external-dns.png"
+<img src="/img/gcp/inspec-gcp-external-dns.png"
  alt="External-DNS"
  class="mt-3 mb-3 border border-info rounded">
 
