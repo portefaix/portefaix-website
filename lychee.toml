@@ -1,0 +1,26 @@
+# Verbose program output
+verbose = true
+
+# Show progress
+progress = false
+
+max_redirects = 10
+
+# Comma-separated list of accepted status codes for valid links.
+# Omit to accept all response types.
+accept = "200,204,302,301"
+
+
+# Exclude all private IPs from checking
+# Equivalent to setting `exclude_private`, `exclude_link_local`, and `exclude_loopback` to true
+exclude_all_private = true
+
+# Exclude all mail addresses from checking
+exclude_mail = true
+
+exclude = [
+    "ssh://*",
+    "sb://*",
+    "http://localhost",
+    "https://git-codecommit*",
+]
