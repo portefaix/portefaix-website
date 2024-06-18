@@ -1,7 +1,6 @@
 ---
 title: Portefaix
-description: >-
-  bla bla bla
+description: The Portefaix website
 show_banner: true
 ---
 
