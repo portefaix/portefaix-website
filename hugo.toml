@@ -132,7 +132,7 @@ prism_syntax_highlighting = false
 
 [params.copyright]
   authors = "Portefaix Authors | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0) | "
-  from_year = 2018
+  # from_year = 2018
 
 # User interface configuration
 [params.ui]
