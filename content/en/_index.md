@@ -1,7 +1,6 @@
 ---
 title: Portefaix
-description: >-
-  bla bla bla
+description: The Portefaix website
 show_banner: true
 ---
 
@@ -32,6 +31,16 @@ show_banner: true
 An Open Source project to deploy applications from the Kubernetes ecosystem in different Cloud Providers.
 {{% /blocks/lead %}}
 
+{{% blocks/section color="white" %}}
+{.h1 .text-center}
+<div class="col">
+	<h2 class="text-center pb-3">Cloud Native Applications</h2>
+	<p class="text-center showcase">
+		<img alt="Cloud Native Applications" width="1500" src="/img/about/portefaix-landscape.png" />
+	</p>
+</div>
+{{% /blocks/section %}}
+
 
 {{% blocks/section color="dark" type="row" %}}
 {{% blocks/feature icon="fas fa-wrench" title="Infrastructure As Code" url="./docs/started/getting-started/#installing-portefaix-on-a-public-cloud" %}}
@@ -58,12 +67,12 @@ Open Source components for monitoring, logging and tracing.
 <div class="col">
 	<h2 class="text-center pb-3">Cloud Providers</h2>
 	<p class="text-center showcase">
-		<a href="https://cloud.google.com/"><img alt="Google Cloud" width="100" src="google-cloud.svg" /></a>
-		<a href="https://aws.amazon.com/"><img alt="AWS" width="100" src="aws.svg" /></a>
-		<a href="https://azure.microsoft.com/"><img alt="Azure" width="100" src="azure-icon.svg" /></a>
-		<a href="https://www.scaleway.com/"><img alt="altavr" width="100" src="scaleway-icon.svg" /></a>
-		<a href="https://www.digitalocean.com/"><img alt="Embark Studios" width="100" src="digitalocean-icon.svg" /></a>
-		<a href="https://www.alibabacloud.com/"><img alt="accelbyte" width="100" src="alibabacloud-icon.svg" /></a>
+		<a href="https://cloud.google.com/"><img alt="Google Cloud" width="100" src="/img/cloud/google-cloud.svg" /></a>
+		<a href="https://aws.amazon.com/"><img alt="AWS" width="100" src="/img/cloud/aws.svg" /></a>
+		<a href="https://azure.microsoft.com/"><img alt="Azure" width="100" src="/img/cloud/azure-icon.svg" /></a>
+		<a href="https://www.scaleway.com/"><img alt="altavr" width="100" src="/img/cloud/scaleway-icon.svg" /></a>
+		<a href="https://www.digitalocean.com/"><img alt="Embark Studios" width="100" src="/img/cloud/digitalocean-icon.svg" /></a>
+		<a href="https://www.alibabacloud.com/"><img alt="accelbyte" width="100" src="/img/cloud/alibabacloud-icon.svg" /></a>
 	</p>
 </div>
 {{% /blocks/section %}}
