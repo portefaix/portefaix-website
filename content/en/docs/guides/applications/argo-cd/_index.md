@@ -27,7 +27,7 @@ To configure the Helm charts, we use YAML files :
 ### Argo-CD
 
 ```shell
-❯ make argocd-bootstrap ENV=<environment> CLOUD=<cloud provider> CHOICE=helm
+❯ make bootstrap-argocd ENV=<environment> CLOUD=<cloud provider> CHOICE=helm
 ```
 
 ### Stacks

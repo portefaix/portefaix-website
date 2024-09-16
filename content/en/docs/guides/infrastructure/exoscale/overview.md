@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Exoscale"
+description: "Portefaix architecture on Exoscale"
 weight: 10
 categories: "Explanation"
 tags: ["Exoscale"]

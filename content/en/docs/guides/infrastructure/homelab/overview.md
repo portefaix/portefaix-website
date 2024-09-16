@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Homelab"
+description: "Portefaix architecture on Homelab"
 weight: 10
 categories: "Explanation"
 tags: ["Homelab"]

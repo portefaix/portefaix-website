@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Digital Ocean"
+description: "Portefaix architecture on Digital Ocean"
 weight: 10
 categories: "Explanation"
 tags: ["Digital Ocean"]

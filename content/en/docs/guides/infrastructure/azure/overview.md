@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Microsoft Azure"
+description: "Portefaix architecture on Microsoft Azure"
 weight: 10
 categories: "Explanation"
 tags: ["Azure"]

@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Orange Cloud Infrastructure"
+description: "Portefaix architecture on Orange Cloud Infrastructure"
 weight: 10
 categories: "Explanation"
 tags: ["OCI"]

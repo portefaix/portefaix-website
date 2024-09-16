@@ -1,9 +1,9 @@
 ---
 type: docs
-title: "Hub"
+title: "Policies"
 linkTitle: "Policies"
 description: "The Portefaix policies"
-weight: 20
+weight: 30
 ---
 
 [Portefaix Policies](https://github.com/portefaix/portefaix-policies) contains Kubernetes policies for [Kyverno](https://kyverno.io/) or [Open Policy Agent](https://www.openpolicyagent.org/).

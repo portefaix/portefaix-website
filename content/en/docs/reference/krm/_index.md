@@ -3,7 +3,7 @@ type: docs
 title: "KRM"
 linkTitle: "KRM"
 description: "The Kubernetes Resources Model deployed into Portefaix"
-weight: 30
+weight: 40
 ---
 
 ## Kubernetes Resources Model

@@ -3,7 +3,7 @@ type: docs
 title: "Inspec"
 linkTitle: "Inspec"
 description: "The Inspec profiles for Portefaix"
-weight: 40
+weight: 90
 ---
 
 ## GCP

@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Civo"
+description: "Portefaix architecture on Civo"
 weight: 10
 categories: "Explanation"
 tags: ["Civo"]

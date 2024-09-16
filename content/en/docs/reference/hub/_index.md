@@ -3,7 +3,7 @@ type: docs
 title: "Hub"
 linkTitle: "Hub"
 description: "The Portefaix Hub for Helm charts"
-weight: 10
+weight: 20
 ---
 
 ## Portefaix Hub

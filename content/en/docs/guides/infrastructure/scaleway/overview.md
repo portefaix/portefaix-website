@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Scaleway"
+description: "Portefaix architecture on Scaleway"
 weight: 10
 categories: "Explanation"
 tags: ["Scaleway"]

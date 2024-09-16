@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Overview"
-description: "Running Portefaix on Google Cloud Platform"
+description: "Portefaix architecture on Google Cloud Platform"
 weight: 10
 categories: "Explanation"
 tags: ["GCP"]

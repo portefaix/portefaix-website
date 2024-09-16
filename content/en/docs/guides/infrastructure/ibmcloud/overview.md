@@ -1,7 +1,7 @@
 ---
 type: docs
 title: "Install on IBM Cloud"
-description: "Running Portefaix on IBM Cloud"
+description: "Portefaix architecture on IBM Cloud"
 weight: 50
 categories: "Explanation"
 tags: ["IBMCloud"]

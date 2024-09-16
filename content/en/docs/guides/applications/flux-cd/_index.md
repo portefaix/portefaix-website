@@ -31,7 +31,7 @@ Flux components are deployed for each cluster on `clusters/<CLOUD>/<ENV>/` :
 ### FluxCD
 
 ```shell
-❯ make fluxcd-bootstrap ENV=<environment> CLOUD=<cloud provider> BRANCH=<git branch to use>
+❯ make bootstrap-fluxcd ENV=<environment> CLOUD=<cloud provider> BRANCH=<git branch to use>
 ```
 
 ### Stacks
