@@ -29,6 +29,6 @@ clean: ## Cleanup
 .PHONY: check
 check: check-hugo ## Check requirements
 
-.PHONY: website-serve
-website-serve: ## Launch website
+.PHONY: serve
+serve: ## Launch website
 	@hugo server

@@ -1,0 +1,406 @@
+#!/usr/bin/env d2
+
+# ===================================== #
+#        Portefaix / Stacks
+# ===================================== #
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+    }
+}
+
+direction: down
+
+title: {
+  label: Portefaix / Stacks
+  near: top-center
+  shape: text
+  style.font-size: 40
+  style.underline: true
+}
+
+classes: {
+    github: {
+      label: Github
+      icon: https://icons.terrastruct.com/dev%2Fgithub.svg
+      shape: image
+    }
+    cloudflare: {
+        label: Cloudflare
+        icon: https://cf-icons.pages.dev/logo-cloud.svg
+        shape: image
+    }
+    auth0: {
+        label: Auth0
+        icon: https://diagrams.mingrammer.com/img/resources/saas/identity/auth0.png
+        shape: image
+    }
+    slack: {
+        label: Slack
+        icon: https://diagrams.mingrammer.com/img/resources/saas/chat/slack.png
+        shape: image
+    }
+    
+    cicd: {
+      label: CI/CD
+      icon: https://diagrams.mingrammer.com/img/resources/onprem/ci/github-actions.png
+      shape: image
+    }
+    artifacthub: {
+        label: ArtifactHub
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/artifacthub/icon/color/artifacthub-icon-color.svg
+        shape: image
+    }
+
+    helm: {
+        label: Helm
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/helm/icon/color/helm-icon-color.svg
+        shape: image
+    }
+    docker: {
+      label: Docker
+      icon: https://icons.terrastruct.com/dev%2Fdocker.svg
+      shape: image
+    }
+
+    // Networking
+    cilium {
+        label: Cilium
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/cilium/icon/color/cilium_icon-color.svg
+        shape: image
+    }
+    coredns {
+        label: CoreDNS
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/coredns/icon/color/coredns-icon-color.svg
+        shape: image
+    }
+    externaldns: {
+        label: External DNS
+        icon: https://github.com/kubernetes-sigs/external-dns/raw/master/docs/img/external-dns.png
+        shape: image
+    }
+    nginx: {
+        label: Nginx
+        icon: https://www.svgrepo.com/show/373924/nginx.svg
+        shape: image
+    }
+
+    // Gitops
+    argocd: {
+      label: Argo-CD
+      icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/argo/icon/color/argo-icon-color.svg
+      shape: image
+    }
+    argorollouts: {
+        label: Argo-Rollout
+        icon: https://argoproj.github.io/static/3748e3a7881fe3b037f2401b65943dc0/a2f3f/rollouts.avif
+        shape: image
+    }
+    argoworkflows: {
+        label: Argo-Workflows
+        icon: https://argoproj.github.io/static/6e944804f836bce176feffed44a8bf7e/a2f3f/workflows.avif
+        shape: image
+    }
+    argoevents: {
+        label: Argo-Events
+        icon: https://argoproj.github.io/static/5f6b445ccaaac8b3f883e81fe96107ef/a2f3f/events.avif
+        shape: image
+    }
+
+    // Observability
+    opentelemetry: {
+        label: OpenTelemetry
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg
+        shape: image
+    }
+    alloy: {
+        label: Grafana Alloy
+        icon: https://raw.githubusercontent.com/grafana/alloy/main/docs/sources/assets/alloy_icon_orange.svg
+        shape: image
+    }
+    grafana: {
+        label: Grafana
+        icon: https://diagrams.mingrammer.com/img/resources/onprem/monitoring/grafana.png
+        shape: image
+    }
+    prometheus: {
+        label: Prometheus
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/prometheus/icon/color/prometheus-icon-color.svg
+        shape: image
+    }
+    prometheusoperator: {
+        label: Prometheus Operator
+        icon: https://diagrams.mingrammer.com/img/resources/onprem/monitoring/prometheus-operator.png
+        shape: image
+    }
+    loki: {
+        label: Loki
+        icon: https://grafana.com/static/img/menu/loki.svg
+        shape: image
+    }
+    tempo: {
+        label: Tempo
+        icon: https://grafana.com/static/img/menu/grafana-tempo.svg
+        shape: image
+    }
+    mimir: {
+        label: Mimir
+        icon: https://grafana.com/static/img/logos/logo-mimir.svg
+        shape: image
+    }
+    pyroscope: {
+        label: Pyroscope
+        icon: https://grafana.com/static/img/pyroscope-logo.svg
+        shape: image
+    }
+
+    // Identity
+    dex: {
+        label: Dex
+        icon: https://diagrams.mingrammer.com/img/resources/onprem/identity/dex.png
+        shape: image
+    }
+
+    // Security
+    falco {
+        label: Falco
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/falco/icon/color/falco-icon-color.svg
+        shape: image
+    }
+    trivy: {
+        label: Trivy
+        icon: https://diagrams.mingrammer.com/img/resources/onprem/security/trivy.png
+        shape: image
+    }
+    kyverno: {
+        label: Kyverno
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/kyverno/icon/color/kyverno-icon-color.svg
+        shape: image
+    }
+    eso: {
+        label: External Secret Operator
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/external-secrets-operator/icon/color/eso-icon-color.svg
+        shape: image
+    }
+
+    // System
+    keda: {
+        label: Keda
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/keda/icon/color/keda-icon-color.svg
+        shape: image
+    }
+    certmanager: {
+        label: Cert-Manager
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/cert-manager/icon/color/cert-manager-icon-color.svg
+        shape: image
+    }
+    keptn: {
+        label: Keptn
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/keptn/icon/color/keptn-icon-color.svg
+        shape: image
+    }
+
+    // chaos
+    litmus: {
+        label: Litmus Chaos
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/litmus/icon/color/litmus-icon-color.svg
+        shape: image
+    }
+
+    // messaging
+    nats: {
+        label: Nats
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/nats/icon/color/nats-icon-color.svg
+        shape: image
+    }
+
+    // tools
+    openfeature: {
+        label: OpenFeature
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/openfeature/icon/black/openfeature-icon-black.svg
+        shape: image
+    }
+    descheduler: {
+        label: Descheduler
+        icon: https://raw.githubusercontent.com/kubernetes-sigs/descheduler/master/assets/logo/descheduler-stacked-color.png
+        shape: image
+    }
+    kured: {
+        label: Kured
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/kured/icon/color/kured-icon-color.svg
+        shape: image
+    }
+    k8sgpt: {
+        label: K8sgpt
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/k8sgpt/icon/color/k8sgpt-icon-color.svg
+        shape: image
+    }
+    
+    // Kubernetes
+    k3s: {
+        label: K3s
+        icon: https://diagrams.mingrammer.com/img/resources/onprem/container/k3s.png
+        shape: image
+    }
+    k8s: {
+      label: Kubernetes
+      icon: https://icons.terrastruct.com/azure%2F_Companies%2FKubernetes.svg
+      shape: image
+    }
+
+    # container-registry: {
+    #   label: Container Registry
+    #   # square corners
+    #   # icon: https://icons.terrastruct.com/aws%2FCompute%2FAmazon-EC2-Container-Registry.svg
+    #   # round corners
+    #   # icon: https://diagrams.mingrammer.com/img/resources/aws/compute/ec2-container-registry.png
+    #   icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FDeveloper%20Tools%2FContainer%20Registry.svg
+    #   shape: image
+    # }
+    
+    dash: {
+      style.stroke-dash: 5
+      style.animated: true
+    }
+}
+
+devops.class: devops
+
+github.class: github
+
+# cloudflare.class: cloudflare
+# auth0.class: auth0
+slack.class: slack
+
+artifacthub.class: artifacthub
+
+cicd.class: cicd
+docker.class: docker
+
+devops -> github: push code {class: dash}
+
+github -> cicd: trigger {class: dash}
+
+# cicd -> github: git commit updated\nk8s image version {class: dash}
+cicd -> docker: build {class: dash}
+artifacthub -> github
+
+slack -> homelab.k3s.monitoring.alertmanager
+
+cloudflarer2.class: cloudflare
+cloudflarer2.label: Cloudflare R2
+cloudflarer2 <- homelab.k3s.monitoring.mimir
+cloudflarer2 <- homelab.k3s.logging.loki
+cloudflarer2 <- homelab.k3s.tracing.tempo
+
+homelab: Homelab {
+    k3s: k3s {
+        k3s.class: k3s
+
+        gitops: Gitops {
+            argocd.class: argocd
+            argorollouts.class: argorollouts
+            argoworkflows.class: argoworkflows
+            argoevents.class: argoevents
+            dex.class: dex
+
+            # helm.class: helm
+
+            _._._.github -> argocd: git pull updates {class: dash}
+            argocd -> dex
+            argorollouts -> dex
+            argoworkflows -> dex
+            argoevents -> _.messaging.nats
+
+            # argocd -> helm {class: dash}
+            # helm -> _._._.artifacthub {class: dash}
+        }
+
+        kubesystem: Kube-System {
+            cilium.class: cilium
+            coredns.class: coredns
+        }
+
+        otel: OpenTelemetry {
+            opentelemetry.class: opentelemetry
+            opentelemetry.label: OpenTelemetry Apps
+            alloy.class: alloy
+
+            opentelemetry -> alloy
+            alloy -> _.monitoring.mimir {class: dash}
+            alloy -> _.logging.loki {class: dash}
+            alloy -> _.tracing.tempo {class: dash}
+            alloy -> _.profiling.pyroscope {class: dash}
+        }
+
+        monitoring: Monitoring {
+            prometheus.class: prometheus
+            prometheusoperator.class: prometheusoperator
+            alertmanager.class: prometheus
+            alertmanager.label: Alertmanager
+            promexporters.class: k8s
+            promexporters.label: Prometheus Exporter(s)
+            mimir.class: mimir
+
+            prometheusoperator -> prometheus
+            prometheus -> promexporters
+            # alertmanager -> _._._.slack
+        }
+
+        logging: Logging {
+            loki.class: loki
+        }
+
+        tracing: Tracing {
+            tempo.class: tempo
+        }
+
+        profiling: Profiling {
+            pyroscope.class: pyroscope
+        }
+
+        observability: Observability {
+            grafana.class: grafana
+
+            grafana -> _.monitoring.prometheus
+            grafana -> _.logging.loki
+            grafana -> _.tracing.tempo
+            grafana -> _.profiling.pyroscope
+        }
+
+        security: Security {
+            falco.class: falco
+            kyverno.class: kyverno
+            eso.class: eso
+        }
+
+        system: System {
+            keda.class: keda
+            keptn.class: keptn
+            certmanager.class: certmanager
+            kured.class: kured
+            descheduler.class: descheduler
+        }
+
+        networking: Networking {
+            externaldns.class: externaldns
+            nginx.class: nginx
+            cloudflaretunnel.class: cloudflare
+            cloudflaretunnel.label: Cloudflare Tunnel
+        }
+
+        messaging: Messaging {
+            nats.class: nats
+        }
+
+        identity: Identity {
+            dex.class: dex
+        }
+
+        tooling: Tooling {
+            openfeature.class: openfeature
+            k8sgpt.class: k8sgpt
+        }
+    }
+}
