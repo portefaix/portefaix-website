@@ -6,73 +6,101 @@ weight = 10
 
 <a id="os"/></a>
 
+## Secrets
+
+All secrets in this repo are encrypted with SOPS leveraging age.
+Generate the public key and age secret:
+
+```shell
+❯ age-keygen -o portefaix.homelab.txt
+```
+
+SOPS is configured to use the age public key via the .sops.yaml in the root of this repo to encrypt files
+
 ## Operating System
 
-Setup operating system for Raspberry PI.
-
-See: https://www.raspberrypi.org/software/
-
-Or:
+Generate the customized Talos Linux image using [Talos Image Factory](https://www.talos.dev/v1.7/learn-more/image-factory), and download them:
 
 ```shell
-❯ sudo dd if=/dev/zero of=/dev/mmcblk0 conv=noerror status=progress
-❯ sudo./hack/scripts/sdcard.sh <hostname> /dev/mmcblk0
+❯ make -f hack/build/talos.mk talos-image
 ```
 
-Enable SSH :
+Then:
+- boot one machine off the ISO to be the control plane node
+- boot one or more machines off the same ISO to be the workers
+
+<!-- 
+Download the Talos iso files:
+```shell
+❯ make -f hack/build/talos.mk talos-iso SCHEMATIC_ID=20301c5ab1025be5b64591acd0bbb1a2c1a0a16d9ad084e5cc86c0d7f5793f48 ARCH=amd64
+❯ make -f hack/build/talos.mk talos-iso SCHEMATIC_ID=20301c5ab1025be5b64591acd0bbb1a2c1a0a16d9ad084e5cc86c0d7f5793f48 ARCH=arm64
+``` -->
+
+To designate the disk where Talos will be installed, update installDisk in `talconfig.yaml`.
+Use this command to display disks (where <IP_ADDR> is your node's local IP address):
 
 ```shell
-❯ make -f hack/build/k3s.mk sdcard-mount ENV=homelab
-❯ sudo touch /mnt/portefaix/boot/ssh
-❯ echo portefaix-xxx | sudo tee /mnt/portefaix/root/etc/hostname
-❯ make -f hack/build/k3s.mk sdcard-unmount ENV=homelab
+❯ talosctl disks -e <IP_ADDR> -n <IP_ADDR> --insecure
 ```
 
-Copy keys to each node:
+Generate your own Talos cluster secrets:
 
 ```shell
-ssh-copy-id -i ~/.ssh/id_rsa.pub pi@x.x.x.x
+❯ make -f hack/build/talos.mk talos-secrets ENV=homelab
 ```
 
-## Ansible
+Generate the Talos configuration:
 
 ```shell
-❯ make ansible-deps SERVICE=ansible/k3s/machines CLOUD=k3s ENV=homelab
-❯ make ansible-run SERVICE=ansible/k3s/machines CLOUD=k3s ENV=homelab
+❯ make -f hack/build/talos.mk talos-config ENV=homelab
 ```
 
-## K3Sup
-
-Create the master :
+Apply the corresponding configuration for each of your node:
 
 ```shell
-❯ make -f hack/build/k3s.mk  k3s-create ENV=homelab SERVER_IP=x.x.x.x EXTERNAL_IP=x.x.x.x
+❯ make -f hack/build/talos.mk talos-apply ENV=homelab NODE_NAME=<NAME> NODE_IP=<IP_ADDR>
 ```
 
-For each node, add it to the cluster, then add a label:
+Save the Talos configuration:
 
 ```shell
-❯ make -f hack/build/k3s.mk k3s-join ENV=homelab SERVER_IP=x.x.x.x AGENT_IP=x.x.x.x EXTERNAL_IP=x.x.x.x
+❯ cp hack/talos/homelab/clusterconfig/talosconfig $HOME/.talos/config
 ```
 
-Authentication and authorization
+Wait for a few minutes for the nodes to reboot, then bootstrap Talos:
 
 ```shell
-❯ make kubernetes-credentials CLOUD=k3s ENV=homelab
+❯ make -f hack/build/talos.mk talos-bootstrap ENV=homelab NODE_IP=<IP_ADDR>
 ```
 
-Set labels:
+Generate kubeconfig:
 
 ```shell
-❯ kubectl label node <NODE_NAME> node-role.kubernetes.io/worker=true
+❯ make -f hack/build/talos.mk talos-kubeconfig ENV=homelab NODE_IP=<IP_ADDR>
 ```
 
-We add also these labels:
+```shell
+❯ talosctl services
+NODE           SERVICE         STATE     HEALTH   LAST CHANGE   LAST EVENT
+192.168.0.61   apid            Running   OK       29m57s ago    Health check successful
+192.168.0.61   containerd      Running   OK       30m5s ago     Health check successful
+192.168.0.61   cri             Running   OK       29m57s ago    Health check successful
+192.168.0.61   etcd            Running   OK       9m41s ago     Health check successful
+192.168.0.61   ext-tailscale   Waiting   ?        29m57s ago    Waiting for extension service config
+192.168.0.61   kubelet         Running   OK       29m48s ago    Health check successful
+192.168.0.61   machined        Running   OK       30m10s ago    Health check successful
+192.168.0.61   syslogd         Running   OK       30m9s ago     Health check successful
+192.168.0.61   trustd          Running   OK       29m57s ago    Health check successful
+192.168.0.61   udevd           Running   OK       30m7s ago     Health check successful
+```
 
-| Label                                | Description                       |
-| ------------------------------------ | --------------------------------- |
-| node-role.kubernetes.io/infra=true   | For core components               |
-| node-role.kubernetes.io/lowcost=true | For pocs, small applications, ... |
+```shell
+❯ kubectl get nodes -o wide
+NAME        STATUS     ROLES                  AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE         KERNEL-VERSION   CONTAINER-RUNTIME
+portefaix   NotReady   control-plane,master   10m   v1.30.3   192.168.0.61   <none>        Talos (v1.7.6)   6.6.43-talos     containerd://1.7.18
+```
+
+## Cilium
 
 The nodes are in a `NotReady` state, due to the Pod Networking CNI plugin is not available.
 [Cilium](https://cilium.io/) must be installed:
@@ -82,39 +110,19 @@ The nodes are in a `NotReady` state, due to the Pod Networking CNI plugin is not
 ❯ make bootstrap-cilium ENV=homelab CLOUD=k3s
 ```
 
-Then check nodes:
-
 ```shell
 ❯ kubectl get node -o wide
-NAME          STATUS     ROLES                       AGE     VERSION        INTERNAL-IP     EXTERNAL-IP      OS-IMAGE           KERNEL-VERSION     CONTAINER-RUNTIME
-portefaix     Ready      control-plane,etcd,master   3h37m   v1.30.2+k3s1   192.168.0.61    100.79.205.64    Ubuntu 24.04 LTS   6.8.0-36-generic   containerd://1.7.17-k3s1
-portefaix-1   NotReady   lowcost,worker              155m    v1.30.2+k3s1   192.168.0.208   100.115.34.57    Ubuntu 24.04 LTS   6.8.0-1005-raspi   containerd://1.7.17-k3s1
-portefaix-2   Ready      lowcost,worker              154m    v1.30.2+k3s1   192.168.0.116   100.126.100.42   Ubuntu 24.04 LTS   6.8.0-1005-raspi   containerd://1.7.17-k3s1
-portefaix-6   Ready      infra,worker                3h21m   v1.30.2+k3s1   192.168.0.233   100.111.218.32   Ubuntu 24.04 LTS   6.8.0-36-generic   containerd://1.7.17-k3s1
-portefaix-7   Ready      infra,worker                3h18m   v1.30.2+k3s1   192.168.0.250   100.86.220.99    Ubuntu 24.04 LTS   6.8.0-36-generic   containerd://1.7.17-k3s1
+
 ```
 
 and Cilium status:
 
 ```shell
 ❯ cilium status
-    /¯¯\
- /¯¯\__/¯¯\    Cilium:         OK
- \__/¯¯\__/    Operator:       OK
- /¯¯\__/¯¯\    Hubble:         OK
- \__/¯¯\__/    ClusterMesh:    disabled
-    \__/
 
-Deployment        cilium-operator    Desired: 1, Ready: 1/1, Available: 1/1
-DaemonSet         cilium             Desired: 4, Ready: 4/4, Available: 4/4
-Deployment        hubble-relay       Desired: 1, Ready: 1/1, Available: 1/1
-Deployment        hubble-ui          Desired: 1, Ready: 1/1, Available: 1/1
-Containers:       cilium             Running: 4
-                  cilium-operator    Running: 1
-                  hubble-relay       Running: 1
-                  hubble-ui          Running: 1
-Cluster Pods:     4/4 managed by Cilium
 ```
+
+
 
 ## Cloudflare
 
@@ -135,9 +143,8 @@ function setup_cloud_provider {
     
         ...
 
-        "k3s")
+        "talos")
             setup_tailscale
-            setup_freebox
             setup_cloudflare
             ;;
         *)
@@ -148,13 +155,13 @@ function setup_cloud_provider {
 }
 ```
 
-The creates the bucket for Terraform:
+Then creates the bucket for Terraform tfstate:
 
 ```shell
-❯ make -f hack/build/k3s.mk cloudflare-bucket-create ENV=homelab
+❯ make -f hack/build/talos.mk cloudflare-bucket-create ENV=homelab
 [portefaix] Create bucket for Terraform states
 {
-    "Location": "/portefaix-homelab-tfstates"
+    "Location": "/portefaix-talos-tfstates"
 }
 ```
 
@@ -163,13 +170,13 @@ The creates the bucket for Terraform:
 Configure DNS:
 
 ```shell
-❯ make terraform-apply SERVICE=terraform/k3s/dns ENV=homelab
+❯ make terraform-apply SERVICE=terraform/talos/dns ENV=homelab
 ```
 
 Creates the R2 buckets for Observability components:
 
 ```shell
-❯ make terraform-apply SERVICE=terraform/k3s/observability ENV=homelab
+❯ make terraform-apply SERVICE=terraform/talos/observability ENV=homelab
 ```
 
 ## Applications
