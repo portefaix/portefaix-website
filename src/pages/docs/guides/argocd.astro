@@ -1,0 +1,146 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeBootstrap = e(`# Install ArgoCD into the cluster
+kubectl create namespace argocd
+kubectl apply -n argocd \\
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Apply the Portefaix root Application
+kubectl apply -f clusters/<cloud>/<env>/argocd/root-app.yaml`);
+
+const codeSyncPolicy = e(`spec:
+  syncPolicy:
+    automated:
+      prune: true      # remove resources deleted from Git
+      selfHeal: true   # revert manual changes to cluster
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true`);
+
+const codeMake = e(`# Deploy a specific stack
+make argocd-deploy-stack STACK=observability ENV=production
+
+# Check sync status
+make argocd-status
+
+# Force a sync
+make argocd-sync APP=observability`);
+
+const codeCluster = e(`argocd cluster add <context-name> \\
+  --name <friendly-name> \\
+  --in-cluster=false`);
+---
+
+<DocsLayout title="ArgoCD" description="Bootstrap stacks and deploy applications with ArgoCD in Portefaix.">
+  <p class="doc-eyebrow">// guides / argocd</p>
+
+  <h1>ArgoCD</h1>
+
+  <p>
+    <a href="https://argo-cd.readthedocs.io" target="_blank" rel="noopener">ArgoCD</a> is a declarative,
+    GitOps-based continuous delivery tool for Kubernetes. In Portefaix it serves as the primary
+    application delivery engine, managing the lifecycle of platform stacks and workloads across clusters.
+  </p>
+
+  <h2>Architecture</h2>
+
+  <p>
+    ArgoCD runs inside the cluster and continuously reconciles Application and ApplicationSet
+    resources against the desired state stored in Git:
+  </p>
+
+  <ul>
+    <li><strong>App of Apps</strong> — a single root Application bootstraps all other Applications, so a single <code>kubectl apply</code> brings up the entire platform.</li>
+    <li><strong>ApplicationSets</strong> — generate Applications automatically from cluster lists, directories, or Git history — useful for multi-cluster deployments.</li>
+    <li><strong>Projects</strong> — ArgoCD Projects scope which repositories and clusters each Application can target, enforcing least-privilege.</li>
+  </ul>
+
+  <h2>Bootstrap</h2>
+
+  <p>To bootstrap ArgoCD on a fresh cluster:</p>
+
+  <pre><code set:html={codeBootstrap}></code></pre>
+
+  <p>
+    From this point, ArgoCD reconciles all remaining stacks automatically from the Git repository.
+    No further manual installation steps are required.
+  </p>
+
+  <h2>Platform Stacks</h2>
+
+  <p>
+    Portefaix organises the platform into stacks — logical groups of related components managed
+    together as ArgoCD Applications:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Stack</th>
+        <th>Components</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Observability</strong></td>
+        <td>Grafana, Prometheus, Loki, Tempo, Mimir, Alloy</td>
+      </tr>
+      <tr>
+        <td><strong>Security</strong></td>
+        <td>Falco, Kyverno, Trivy Operator, cert-manager</td>
+      </tr>
+      <tr>
+        <td><strong>Networking</strong></td>
+        <td>Cilium, external-dns, ingress-nginx, Gateway API</td>
+      </tr>
+      <tr>
+        <td><strong>Platform</strong></td>
+        <td>Crossplane, Cluster API, Velero, external-secrets</td>
+      </tr>
+      <tr>
+        <td><strong>GitOps</strong></td>
+        <td>ArgoCD itself, Argo Rollouts, Argo Workflows</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Sync Policies</h2>
+
+  <p>
+    Each Application in Portefaix is configured with automated sync:
+  </p>
+
+  <pre><code set:html={codeSyncPolicy}></code></pre>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>Caution:</strong> <code>prune: true</code> will delete cluster resources that are removed from Git.
+      Verify your Git state is complete before enabling this on production clusters.
+    </p>
+  </div>
+
+  <h2>Useful Make Targets</h2>
+
+  <p>The Portefaix Makefile provides targets for common ArgoCD operations:</p>
+
+  <pre><code set:html={codeMake}></code></pre>
+
+  <h2>Multi-cluster Setup</h2>
+
+  <p>
+    For multi-cluster deployments, ArgoCD runs in a central management cluster and registers
+    spoke clusters using the ArgoCD CLI:
+  </p>
+
+  <pre><code set:html={codeCluster}></code></pre>
+
+  <p>
+    ApplicationSets then target all registered clusters automatically using the cluster generator.
+  </p>
+</DocsLayout>

@@ -1,0 +1,33 @@
+{
+  "name": "portefaix-website",
+  "version": "0.1.0",
+  "description": "Portefaix project website — platform engineering, systematized.",
+  "repository": "github:portefaix/portefaix-website",
+  "homepage": "https://portefaix.xyz",
+  "author": "Nicolas Lamirault",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@astrojs/react": "^5.0.2",
+    "astro": "6.1.1",
+    "lucide-react": "^1.7.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250407.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "tailwindcss": "^4.2.2",
+    "wrangler": "^4.0.0"
+  },
+  "overrides": {
+    "vite": "^7"
+  }
+}

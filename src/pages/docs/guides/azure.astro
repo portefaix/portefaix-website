@@ -1,0 +1,171 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeVars = e(`# infrastructure/azure/<env>/terraform.tfvars
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+location        = "West Europe"
+environment     = "production"
+cluster_name    = "portefaix-production"`);
+
+const codeBackend = e(`az group create --name tfstate-rg --location "West Europe"
+az storage account create \\
+  --name portefaixtfstate \\
+  --resource-group tfstate-rg \\
+  --sku Standard_LRS
+
+az storage container create \\
+  --name tfstate \\
+  --account-name portefaixtfstate`);
+
+const codeInit = e(`cd infrastructure/azure/production
+
+terraform init \\
+  -backend-config="resource_group_name=tfstate-rg" \\
+  -backend-config="storage_account_name=portefaixtfstate" \\
+  -backend-config="container_name=tfstate" \\
+  -backend-config="key=portefaix/azure/production.tfstate"
+
+terraform plan -out=tfplan
+terraform apply tfplan`);
+
+const codeKubeconfig = e(`az aks get-credentials \\
+  --resource-group portefaix-production-rg \\
+  --name portefaix-production`);
+
+const codeWI = e(`# Enable OIDC issuer on AKS
+az aks update \\
+  --resource-group portefaix-production-rg \\
+  --name portefaix-production \\
+  --enable-oidc-issuer \\
+  --enable-workload-identity`);
+
+const codeSops = e(`# .sops.yaml
+creation_rules:
+  - path_regex: .*.yaml
+    azure_keyvault: https://portefaix-kv.vault.azure.net/keys/sops/<key-id>`);
+
+const codeInspec = e(`# Run InSpec tests against Azure
+inspec exec portefaix-inspec-azure \\
+  -t azure:// \\
+  --input subscription_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \\
+  --reporter cli junit:reports/inspec-azure.xml`);
+---
+
+<DocsLayout title="Azure" description="Deploy and manage Portefaix on Microsoft Azure.">
+  <p class="doc-eyebrow">// guides / infrastructure / azure</p>
+
+  <h1>Microsoft Azure</h1>
+
+  <p>
+    Portefaix deploys a production-ready AKS cluster on Azure with a complete supporting stack:
+    Virtual Networks, Azure Active Directory integration, Azure Key Vault, Azure DNS, ACR for
+    container images, and Azure Storage for Terraform state and backups.
+  </p>
+
+  <h2>Architecture</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Azure Service</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Kubernetes cluster</td>
+        <td>AKS</td>
+        <td>Container orchestration</td>
+      </tr>
+      <tr>
+        <td>Networking</td>
+        <td>VNet, Subnets, NAT Gateway</td>
+        <td>Private cluster networking</td>
+      </tr>
+      <tr>
+        <td>Identity</td>
+        <td>Managed Identity, AAD Workload Identity</td>
+        <td>Pod-level Azure authentication</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>Azure Key Vault</td>
+        <td>SOPS encryption, runtime secrets</td>
+      </tr>
+      <tr>
+        <td>DNS</td>
+        <td>Azure DNS</td>
+        <td>External-DNS managed records</td>
+      </tr>
+      <tr>
+        <td>Registry</td>
+        <td>Azure Container Registry (ACR)</td>
+        <td>Container image storage</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>Azure Blob Storage</td>
+        <td>Terraform state, Velero backups, Loki</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>Azure subscription with Owner or Contributor access</li>
+    <li>Azure CLI authenticated: <code>az login</code></li>
+    <li>Terraform ≥ 1.5</li>
+    <li><code>kubectl</code> and <code>helm</code></li>
+  </ul>
+
+  <h2>Deploying Infrastructure</h2>
+
+  <h3>1. Configure Variables</h3>
+  <pre><code set:html={codeVars}></code></pre>
+
+  <h3>2. Create Remote State Backend</h3>
+  <pre><code set:html={codeBackend}></code></pre>
+
+  <h3>3. Initialize and Apply</h3>
+  <pre><code set:html={codeInit}></code></pre>
+
+  <h3>4. Configure kubectl</h3>
+  <pre><code set:html={codeKubeconfig}></code></pre>
+
+  <h2>Workload Identity</h2>
+
+  <p>
+    Portefaix uses the
+    <a href="https://azure.github.io/azure-workload-identity/" target="_blank" rel="noopener">Azure Workload Identity</a>
+    to grant Kubernetes workloads access to Azure resources via federated credentials — no static credentials required.
+  </p>
+
+  <pre><code set:html={codeWI}></code></pre>
+
+  <h2>Key Vault Integration</h2>
+
+  <p>
+    Azure Key Vault is used as the SOPS KMS backend for encrypting Kubernetes secrets before
+    committing them to Git:
+  </p>
+
+  <pre><code set:html={codeSops}></code></pre>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Note:</strong> The Workload Identity used by Flux's Kustomize controller must have
+      <code>Key Vault Crypto User</code> permission on the Key Vault to perform SOPS decryption.
+    </p>
+  </div>
+
+  <h2>Compliance Testing</h2>
+
+  <pre><code set:html={codeInspec}></code></pre>
+</DocsLayout>

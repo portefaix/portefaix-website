@@ -1,0 +1,118 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeStructure = e(`portefaix-kubernetes/
+├── clusters/
+│   ├── gcp/
+│   │   └── production/     # cluster-specific kustomizations
+│   └── aws/
+│       └── staging/
+├── stacks/
+│   ├── observability/      # Grafana, Prometheus, Loki, Tempo
+│   ├── security/           # Falco, Kyverno, Trivy
+│   ├── networking/         # Cilium, cert-manager, external-dns
+│   └── platform/           # Crossplane, ArgoCD/FluxCD itself
+└── apps/
+    └── ...                 # application-level GitOps`);
+---
+
+<DocsLayout title="GitOps Principles" description="Core OpenGitOps principles applied across the Portefaix platform.">
+  <p class="doc-eyebrow">// guides / gitops</p>
+
+  <h1>GitOps Principles</h1>
+
+  <p>
+    Portefaix is built on GitOps — a set of practices that use Git as the single source of truth for
+    declarative infrastructure and application state. We follow the
+    <a href="https://opengitops.dev" target="_blank" rel="noopener">OpenGitOps</a> specification,
+    a CNCF Sandbox project that formalises what "GitOps" means.
+  </p>
+
+  <h2>The Four OpenGitOps Principles</h2>
+
+  <h3>1. Declarative</h3>
+  <p>
+    The entire system — infrastructure, applications, policies — is described declaratively.
+    Desired state is expressed as code checked into Git, not as imperative commands.
+    This means the system state is always auditable and reproducible.
+  </p>
+
+  <h3>2. Versioned and Immutable</h3>
+  <p>
+    The desired state is stored in a way that enforces immutability and retains a complete version
+    history. Git provides this naturally: every change is a commit, and history is never rewritten
+    in a production context. This makes rollback trivial — revert to any previous commit.
+  </p>
+
+  <h3>3. Pulled Automatically</h3>
+  <p>
+    Software agents (ArgoCD, FluxCD) continuously observe the desired state in Git and automatically
+    apply it to the target system. Rather than pushing changes from a CI pipeline, the cluster
+    <em>pulls</em> its own desired state. This eliminates the need to grant CI systems write access
+    to production clusters.
+  </p>
+
+  <h3>4. Continuously Reconciled</h3>
+  <p>
+    Software agents continuously reconcile the actual state of the system with the desired state.
+    Any drift — whether from manual changes, node restarts, or partial failures — is automatically
+    corrected. The system self-heals.
+  </p>
+
+  <h2>GitOps in Portefaix</h2>
+
+  <p>
+    Portefaix supports two GitOps tools, which serve different purposes and can be used together:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tool</th>
+        <th>Primary Use</th>
+        <th>Portefaix Guide</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="https://argo-cd.readthedocs.io" target="_blank" rel="noopener">ArgoCD</a></td>
+        <td>Application delivery, UI-driven workflow, multi-cluster sync</td>
+        <td><a href="/docs/guides/argocd/">ArgoCD Guide →</a></td>
+      </tr>
+      <tr>
+        <td><a href="https://fluxcd.io" target="_blank" rel="noopener">FluxCD</a></td>
+        <td>Infrastructure reconciliation, secret management with SOPS, CI/CD automation</td>
+        <td><a href="/docs/guides/fluxcd/">FluxCD Guide →</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Repository Structure</h2>
+
+  <p>
+    In a typical Portefaix deployment, the GitOps repositories are structured as follows:
+  </p>
+
+  <pre><code set:html={codeStructure}></code></pre>
+
+  <h2>Secrets Management</h2>
+
+  <p>
+    Portefaix uses <a href="https://github.com/getsops/sops" target="_blank" rel="noopener">SOPS</a>
+    (Secrets OPerationS) to encrypt secrets before committing them to Git. Decryption keys are managed
+    via cloud KMS (GCP KMS, AWS KMS) or PGP, so secrets are safe at rest in the repository while
+    being automatically decrypted during reconciliation.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Key insight:</strong> Never commit unencrypted secrets to Git — even in a private repository.
+      SOPS encrypts values while preserving the YAML/JSON structure, making diffs readable.
+    </p>
+  </div>
+</DocsLayout>

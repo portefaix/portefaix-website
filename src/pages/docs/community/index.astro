@@ -1,0 +1,92 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Community" description="Join the Portefaix community and learn how to contribute.">
+  <p class="doc-eyebrow">// community</p>
+
+  <h1>Community</h1>
+
+  <p>
+    Portefaix is an open-source project built by platform engineers for platform engineers.
+    All development happens in the open on GitHub, and contributions of any size are welcome.
+  </p>
+
+  <h2>How to Get Involved</h2>
+
+  <ul>
+    <li>
+      <strong>GitHub</strong> — Browse code, open issues, and submit pull requests at
+      <a href="https://github.com/portefaix" target="_blank" rel="noopener">github.com/portefaix</a>.
+    </li>
+    <li>
+      <strong>Issues</strong> — Found a bug or have a feature request? Open an issue on the relevant
+      sub-project repository.
+    </li>
+    <li>
+      <strong>Discussions</strong> — Ask questions and share ideas in GitHub Discussions.
+    </li>
+    <li>
+      <strong>Pull Requests</strong> — All contributions are reviewed and merged via pull requests.
+      See the <a href="https://github.com/portefaix/portefaix-kubernetes/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing Guide</a>
+      for details.
+    </li>
+  </ul>
+
+  <h2>Repositories</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Repository</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="https://github.com/portefaix/portefaix-kubernetes" target="_blank" rel="noopener">portefaix-kubernetes</a></td>
+        <td>Kubernetes platform configurations and GitOps stacks</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/portefaix/portefaix-infrastructure" target="_blank" rel="noopener">portefaix-infrastructure</a></td>
+        <td>Terraform modules and cloud infrastructure</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/portefaix/portefaix-hub" target="_blank" rel="noopener">portefaix-hub</a></td>
+        <td>Helm chart registry</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/portefaix/portefaix-policies" target="_blank" rel="noopener">portefaix-policies</a></td>
+        <td>Policy library (Kyverno + OPA)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Code of Conduct</h2>
+
+  <p>
+    Portefaix follows the
+    <a href="https://www.contributor-covenant.org/version/2/1/code_of_conduct/" target="_blank" rel="noopener">
+      Contributor Covenant Code of Conduct
+    </a>.
+    We expect all participants to adhere to it in all project spaces.
+  </p>
+
+  <h2>License</h2>
+
+  <p>
+    All Portefaix sub-projects are licensed under the
+    <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a>.
+    Contributions are accepted under the same license via the Developer Certificate of Origin (DCO).
+  </p>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>First contribution?</strong> Look for issues tagged <code>good first issue</code> on any
+      of the sub-project repositories — they're specifically chosen for new contributors.
+    </p>
+  </div>
+</DocsLayout>

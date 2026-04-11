@@ -1,0 +1,188 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeKyverno = e(`apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-labels
+  annotations:
+    policies.kyverno.io/title: Require Labels
+    policies.kyverno.io/category: PORTEFAIX-C0001
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-for-labels
+      match:
+        any:
+          - resources:
+              kinds: [Deployment, StatefulSet, DaemonSet]
+      validate:
+        message: "Label 'app.kubernetes.io/name' is required."
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"`);
+
+const codeOpa = e(`# PORTEFAIX-P0005: No latest image tag
+package portefaix.policies.p0005
+
+violation[{"msg": msg, "details": {}}] {
+  container := input.review.object.spec.containers[_]
+  endswith(container.image, ":latest")
+  msg := sprintf(
+    "PORTEFAIX-P0005: Container '%v' must not use ':latest' image tag.",
+    [container.name]
+  )
+}`);
+
+const codeCi = e(`# Kyverno CLI test
+kyverno test policies/kyverno/
+
+# Conftest (OPA)
+conftest test --policy policies/opa/ manifests/`);
+
+const kyvernoPolicies = [
+  { code: "PORTEFAIX-C0001", name: "Require labels", desc: "All resources must have the required Portefaix labels." },
+  { code: "PORTEFAIX-C0002", name: "Require team label", desc: "Resources must carry a team ownership label." },
+  { code: "PORTEFAIX-C0003", name: "Require app label", desc: "Pods must carry an app.kubernetes.io/name label." },
+  { code: "PORTEFAIX-C0004", name: "Require version label", desc: "Deployments must specify an app.kubernetes.io/version label." },
+  { code: "PORTEFAIX-C0005", name: "Require managed-by label", desc: "Resources must declare their management tool." },
+];
+
+const opaPolicies = [
+  { code: "PORTEFAIX-P0001", name: "No privileged containers", desc: "Containers must not run in privileged mode." },
+  { code: "PORTEFAIX-P0002", name: "Read-only root filesystem", desc: "Container root filesystems must be read-only." },
+  { code: "PORTEFAIX-P0003", name: "No host network", desc: "Pods must not use the host network namespace." },
+  { code: "PORTEFAIX-P0004", name: "Resource limits required", desc: "All containers must define CPU and memory limits." },
+  { code: "PORTEFAIX-P0005", name: "No latest image tag", desc: "Container images must not use the :latest tag." },
+];
+---
+
+<DocsLayout title="Policies" description="Kyverno and OPA policy catalogue with policy codes for Portefaix.">
+  <p class="doc-eyebrow">// reference / policies</p>
+
+  <h1>Platform Policies</h1>
+
+  <p>
+    <a href="https://github.com/portefaix/portefaix-policies" target="_blank" rel="noopener">portefaix-policies</a>
+    is a library of Kubernetes admission policies implemented in both
+    <a href="https://kyverno.io" target="_blank" rel="noopener">Kyverno</a> and
+    <a href="https://www.openpolicyagent.org" target="_blank" rel="noopener">OPA/Gatekeeper</a>.
+    Every policy has a unique code (e.g. <code>PORTEFAIX-C0001</code>) that appears in admission
+    webhook rejections, audit logs, and CI reports.
+  </p>
+
+  <h2>Policy Engines</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Engine</th>
+        <th>Language</th>
+        <th>Mode</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Kyverno</strong></td>
+        <td>YAML-native policies</td>
+        <td>Enforce, Audit</td>
+      </tr>
+      <tr>
+        <td><strong>OPA / Gatekeeper</strong></td>
+        <td>Rego</td>
+        <td>Enforce, Audit</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Kyverno Policies</h2>
+
+  <p>
+    Kyverno policies are deployed as <code>ClusterPolicy</code> resources. They cover validation,
+    mutation, and generation use cases.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Policy</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {kyvernoPolicies.map((p) => (
+        <tr>
+          <td><code>{p.code}</code></td>
+          <td><strong>{p.name}</strong></td>
+          <td>{p.desc}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h3>Example Kyverno Policy</h3>
+  <pre><code set:html={codeKyverno}></code></pre>
+
+  <h2>OPA / Gatekeeper Policies</h2>
+
+  <p>
+    OPA policies are written in Rego and deployed as Gatekeeper <code>ConstraintTemplate</code>
+    and <code>Constraint</code> resource pairs.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Policy</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {opaPolicies.map((p) => (
+        <tr>
+          <td><code>{p.code}</code></td>
+          <td><strong>{p.name}</strong></td>
+          <td>{p.desc}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h3>Example OPA Policy</h3>
+  <pre><code set:html={codeOpa}></code></pre>
+
+  <h2>Policy Modes</h2>
+
+  <ul>
+    <li><strong>Enforce</strong> — reject non-compliant resources at admission time. Use for critical security policies.</li>
+    <li><strong>Audit</strong> — allow resources but report violations. Use during rollout or for informational policies.</li>
+  </ul>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>Gradual rollout:</strong> Switch new policies to <code>Audit</code> mode first.
+      Review violation reports, fix workloads, then switch to <code>Enforce</code>.
+      Jumping straight to <code>Enforce</code> on a running cluster can cause outages.
+    </p>
+  </div>
+
+  <h2>CI Integration</h2>
+
+  <p>
+    All policies are tested in CI using <a href="https://kyverno.io/docs/kyverno-cli/" target="_blank" rel="noopener">Kyverno CLI</a>
+    and <a href="https://www.conftest.dev" target="_blank" rel="noopener">Conftest</a> with a suite of
+    pass/fail YAML fixtures:
+  </p>
+
+  <pre><code set:html={codeCi}></code></pre>
+</DocsLayout>

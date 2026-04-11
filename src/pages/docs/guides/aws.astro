@@ -1,0 +1,166 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeVars = e(`# infrastructure/aws/<env>/terraform.tfvars
+aws_region  = "eu-west-1"
+environment = "production"
+cluster_name = "portefaix-production"
+organization = "my-org"`);
+
+const codeInit = e(`cd infrastructure/aws/production
+
+terraform init \\
+  -backend-config="bucket=my-tfstate-bucket" \\
+  -backend-config="key=portefaix/aws/production/terraform.tfstate" \\
+  -backend-config="region=eu-west-1"
+
+terraform plan -out=tfplan
+terraform apply tfplan`);
+
+const codeKubeconfig = e(`aws eks update-kubeconfig \\
+  --name portefaix-production \\
+  --region eu-west-1`);
+
+const codeIRSA = e(`# Example: external-dns IAM role
+module "external_dns_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+
+  role_name             = "external-dns"
+  attach_external_dns_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["external-dns:external-dns"]
+    }
+  }
+}`);
+
+const codeInspec = e(`# Run InSpec tests against AWS
+inspec exec portefaix-inspec-aws \\
+  -t aws:// \\
+  --input region=eu-west-1 \\
+  --reporter cli junit:reports/inspec-aws.xml`);
+---
+
+<DocsLayout title="AWS" description="Deploy and manage Portefaix on Amazon Web Services.">
+  <p class="doc-eyebrow">// guides / infrastructure / aws</p>
+
+  <h1>Amazon Web Services</h1>
+
+  <p>
+    Portefaix deploys a production-ready EKS cluster on AWS with full supporting infrastructure:
+    VPC with private subnets, IAM Roles for Service Accounts (IRSA), KMS encryption, Route53 DNS,
+    ECR for container images, and S3 for Terraform state and backups.
+  </p>
+
+  <h2>Architecture</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>AWS Service</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Kubernetes cluster</td>
+        <td>EKS</td>
+        <td>Container orchestration</td>
+      </tr>
+      <tr>
+        <td>Networking</td>
+        <td>VPC, Subnets, NAT Gateway</td>
+        <td>Private cluster networking</td>
+      </tr>
+      <tr>
+        <td>Identity</td>
+        <td>IRSA, IAM Roles</td>
+        <td>Pod-level AWS authentication</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>AWS KMS</td>
+        <td>SOPS encryption, EKS envelope encryption</td>
+      </tr>
+      <tr>
+        <td>DNS</td>
+        <td>Route53</td>
+        <td>External-DNS managed records</td>
+      </tr>
+      <tr>
+        <td>Registry</td>
+        <td>ECR</td>
+        <td>Container image storage</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>S3</td>
+        <td>Terraform state, Velero backups, Loki</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>AWS account with appropriate permissions</li>
+    <li>AWS CLI configured: <code>aws configure</code></li>
+    <li>Terraform ≥ 1.5</li>
+    <li><code>kubectl</code>, <code>helm</code>, and <code>eksctl</code></li>
+  </ul>
+
+  <h2>Deploying Infrastructure</h2>
+
+  <h3>1. Configure Variables</h3>
+  <pre><code set:html={codeVars}></code></pre>
+
+  <h3>2. Initialize and Apply</h3>
+  <pre><code set:html={codeInit}></code></pre>
+
+  <h3>3. Configure kubectl</h3>
+  <pre><code set:html={codeKubeconfig}></code></pre>
+
+  <h2>IAM Roles for Service Accounts (IRSA)</h2>
+
+  <p>
+    Portefaix uses IRSA to grant Kubernetes workloads fine-grained access to AWS services without
+    static credentials. Each platform component (external-dns, cluster-autoscaler, Velero, Loki, etc.)
+    gets its own IAM role bound to a Kubernetes ServiceAccount via OIDC.
+  </p>
+
+  <pre><code set:html={codeIRSA}></code></pre>
+
+  <h2>Multi-Account Organisation</h2>
+
+  <p>
+    For production deployments, Portefaix recommends an AWS Organisation structure with separate
+    accounts for each environment:
+  </p>
+
+  <ul>
+    <li><strong>Management</strong> — root account, AWS Organisation, SCPs</li>
+    <li><strong>Security</strong> — centralised logging, GuardDuty, Security Hub</li>
+    <li><strong>Shared Services</strong> — ECR, Transit Gateway, shared DNS</li>
+    <li><strong>Production</strong> — production EKS workloads</li>
+    <li><strong>Staging</strong> — staging EKS workloads</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Tip:</strong> Use AWS Control Tower to automate account vending and enforce guardrails
+      via SCPs across the Organisation.
+    </p>
+  </div>
+
+  <h2>Compliance Testing</h2>
+
+  <pre><code set:html={codeInspec}></code></pre>
+</DocsLayout>

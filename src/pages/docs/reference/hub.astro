@@ -1,0 +1,125 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeOci = e(`# Add the Portefaix Helm repository
+helm repo add portefaix-hub https://charts.portefaix.xyz
+
+# Or pull directly as OCI artifact
+helm pull oci://ghcr.io/portefaix/portefaix-hub/<chart-name> --version <version>`);
+
+const codeFlux = e(`apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: my-app
+  namespace: my-namespace
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: my-app
+      version: "1.2.3"
+      sourceRef:
+        kind: HelmRepository
+        name: portefaix-hub
+        namespace: flux-system`);
+
+const codeArgo = e(`spec:
+  source:
+    repoURL: https://charts.portefaix.xyz
+    chart: my-app
+    targetRevision: 1.2.3
+    helm:
+      values: |
+        replicaCount: 2`);
+---
+
+<DocsLayout title="Helm Charts Hub" description="Curated Helm chart registry for the Portefaix platform.">
+  <p class="doc-eyebrow">// reference / hub</p>
+
+  <h1>Helm Charts Hub</h1>
+
+  <p>
+    <a href="https://github.com/portefaix/portefaix-hub" target="_blank" rel="noopener">portefaix-hub</a>
+    is a curated Helm chart registry containing charts optimised for the Portefaix platform.
+    Charts are published as OCI artifacts and are automatically updated via Renovate Bot.
+  </p>
+
+  <h2>Using the Hub</h2>
+
+  <h3>OCI Registry</h3>
+  <pre><code set:html={codeOci}></code></pre>
+
+  <h3>In FluxCD HelmRelease</h3>
+  <pre><code set:html={codeFlux}></code></pre>
+
+  <h3>In ArgoCD Application</h3>
+  <pre><code set:html={codeArgo}></code></pre>
+
+  <h2>Chart Categories</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Platform</strong></td>
+        <td>Core platform components configured for Portefaix defaults</td>
+      </tr>
+      <tr>
+        <td><strong>Observability</strong></td>
+        <td>Pre-configured Grafana dashboards, Prometheus rules, Loki pipelines</td>
+      </tr>
+      <tr>
+        <td><strong>Security</strong></td>
+        <td>Kyverno policies, Falco rules packaged as Helm charts</td>
+      </tr>
+      <tr>
+        <td><strong>Applications</strong></td>
+        <td>Reference application charts for workload deployment patterns</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Chart Development</h2>
+
+  <p>All Portefaix Hub charts follow these conventions:</p>
+
+  <ul>
+    <li>Semantic versioning (<code>MAJOR.MINOR.PATCH</code>)</li>
+    <li>Values documented with <code>values.yaml</code> comments and <code>values.schema.json</code></li>
+    <li>Compatibility matrix for Kubernetes versions listed in <code>Chart.yaml</code></li>
+    <li>CI validation with <code>chart-testing</code> on every pull request</li>
+    <li>Published to GitHub Container Registry as OCI artifacts</li>
+  </ul>
+
+  <h2>Automated Updates</h2>
+
+  <p>
+    Renovate Bot monitors upstream chart versions and opens pull requests to update
+    <code>Chart.yaml</code> dependencies automatically. The update pipeline:
+  </p>
+
+  <ol>
+    <li>Renovate detects a new upstream version</li>
+    <li>Opens a PR with the version bumped in <code>Chart.yaml</code></li>
+    <li>CI runs <code>helm lint</code> and <code>chart-testing</code></li>
+    <li>Maintainer reviews and merges</li>
+    <li>GitHub Actions packages and publishes the new chart version</li>
+  </ol>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Tip:</strong> Pin chart versions in your GitOps manifests and rely on Renovate to
+      propose updates — never use floating version ranges like <code>&gt;=1.0.0</code> in production.
+    </p>
+  </div>
+</DocsLayout>

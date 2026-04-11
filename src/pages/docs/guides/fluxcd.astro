@@ -1,0 +1,193 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeBootstrap = e(`flux bootstrap github \\
+  --owner=<your-org> \\
+  --repository=portefaix-kubernetes \\
+  --branch=main \\
+  --path=clusters/<cloud>/<env> \\
+  --personal`);
+
+const codeGcpKms = e(`# Create a KMS key ring and key
+gcloud kms keyrings create sops --location global
+gcloud kms keys create flux \\
+  --location global \\
+  --keyring sops \\
+  --purpose encryption
+
+# Configure SOPS
+cat > .sops.yaml <<EOF
+creation_rules:
+  - path_regex: .*.yaml
+    gcp_kms: projects/<project>/locations/global/keyRings/sops/cryptoKeys/flux
+EOF
+
+# Encrypt a secret
+sops -e secret.yaml > secret.enc.yaml`);
+
+const codeAge = e(`# Generate an AGE key pair
+age-keygen -o age.agekey
+
+# Create Flux secret for decryption
+kubectl create secret generic sops-age \\
+  --namespace=flux-system \\
+  --from-file=age.agekey=age.agekey
+
+# Configure Kustomization to use AGE
+spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age`);
+
+const codeStructure = e(`clusters/gcp/production/
+├── flux-system/           # Flux controllers
+├── kustomization.yaml     # Root kustomization
+└── stacks/
+    ├── observability.yaml # HelmRelease refs
+    ├── security.yaml
+    └── networking.yaml
+
+base/stacks/
+└── observability/
+    ├── kustomization.yaml
+    └── helm-release.yaml   # Base HelmRelease`);
+
+const codeCheck = e(`# Check reconciliation status
+flux get kustomizations --all-namespaces
+flux get helmreleases --all-namespaces
+
+# View events
+flux events --for Kustomization/flux-system`);
+
+const codeSyncPolicy = e(`spec:
+  syncPolicy:
+    automated:
+      prune: true      # remove resources deleted from Git
+      selfHeal: true   # revert manual changes to cluster
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true`);
+---
+
+<DocsLayout title="FluxCD" description="GitOps with FluxCD, SOPS secrets, and CI/CD pipelines in Portefaix.">
+  <p class="doc-eyebrow">// guides / fluxcd</p>
+
+  <h1>FluxCD</h1>
+
+  <p>
+    <a href="https://fluxcd.io" target="_blank" rel="noopener">FluxCD</a> is a set of continuous and
+    progressive delivery solutions for Kubernetes, built on the GitOps Toolkit. In Portefaix, FluxCD
+    manages infrastructure-level reconciliation and integrates tightly with SOPS for secret management.
+  </p>
+
+  <h2>GitOps Toolkit</h2>
+
+  <p>
+    Flux is composed of specialised controllers, each responsible for a specific concern:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Controller</th>
+        <th>Responsibility</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Source Controller</strong></td>
+        <td>Fetches artifacts from Git, Helm, OCI registries</td>
+      </tr>
+      <tr>
+        <td><strong>Kustomize Controller</strong></td>
+        <td>Applies Kustomize overlays and manages reconciliation</td>
+      </tr>
+      <tr>
+        <td><strong>Helm Controller</strong></td>
+        <td>Manages HelmRelease resources and Helm chart lifecycle</td>
+      </tr>
+      <tr>
+        <td><strong>Notification Controller</strong></td>
+        <td>Sends alerts and events to Slack, Teams, GitHub, etc.</td>
+      </tr>
+      <tr>
+        <td><strong>Image Automation</strong></td>
+        <td>Monitors container registries and updates image tags in Git</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Bootstrap</h2>
+
+  <p>Flux is bootstrapped directly into your cluster using the Flux CLI:</p>
+
+  <pre><code set:html={codeBootstrap}></code></pre>
+
+  <p>
+    This installs Flux into the <code>flux-system</code> namespace and creates a deploy key on the
+    repository so Flux can pull updates.
+  </p>
+
+  <h2>Secret Management with SOPS</h2>
+
+  <p>
+    Portefaix uses <a href="https://github.com/getsops/sops" target="_blank" rel="noopener">SOPS</a>
+    with cloud KMS to encrypt secrets before committing them to Git.
+    Flux's Kustomize controller natively decrypts SOPS-encrypted files during reconciliation.
+  </p>
+
+  <h3>Setup with GCP KMS</h3>
+  <pre><code set:html={codeGcpKms}></code></pre>
+
+  <h3>Setup with AGE (local/on-prem)</h3>
+  <pre><code set:html={codeAge}></code></pre>
+
+  <h2>Kustomization Structure</h2>
+
+  <p>
+    Portefaix uses a layered Kustomize structure for environment overrides:
+  </p>
+
+  <pre><code set:html={codeStructure}></code></pre>
+
+  <h2>ArgoCD Sync Policy Reference</h2>
+
+  <p>For comparison, the ArgoCD equivalent sync policy looks like:</p>
+
+  <pre><code set:html={codeSyncPolicy}></code></pre>
+
+  <h2>CI/CD Integration</h2>
+
+  <p>
+    Flux integrates with GitHub Actions for a full GitOps CI/CD pipeline:
+  </p>
+
+  <ol>
+    <li><strong>CI</strong> — GitHub Actions builds and pushes a new container image to the registry.</li>
+    <li><strong>Image Update</strong> — Flux Image Automation detects the new tag and opens a pull request updating the image reference in Git.</li>
+    <li><strong>Review &amp; Merge</strong> — The team reviews and merges the PR.</li>
+    <li><strong>Reconciliation</strong> — Flux detects the change in Git and deploys the new image to the cluster.</li>
+  </ol>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Note:</strong> The Flux Image Automation controller is not installed by default.
+      Enable it by adding <code>--components-extra=image-reflector-controller,image-automation-controller</code>
+      to the bootstrap command.
+    </p>
+  </div>
+
+  <h2>Monitoring Flux</h2>
+
+  <p>Flux exposes Prometheus metrics for all controllers. The Portefaix observability stack
+  includes pre-built Grafana dashboards for Flux reconciliation status, drift detection, and
+  error rates.</p>
+
+  <pre><code set:html={codeCheck}></code></pre>
+</DocsLayout>

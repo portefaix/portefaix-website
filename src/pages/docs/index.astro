@@ -1,0 +1,118 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const sections = [
+  {
+    label: "Guides",
+    color: "#818cf8",
+    items: [
+      { title: "GitOps Principles", href: "/docs/guides/gitops/", desc: "Core OpenGitOps principles applied across the platform." },
+      { title: "ArgoCD", href: "/docs/guides/argocd/", desc: "Bootstrap stacks and deploy applications with ArgoCD." },
+      { title: "FluxCD", href: "/docs/guides/fluxcd/", desc: "GitOps with FluxCD, SOPS secrets, and CI/CD pipelines." },
+    ],
+  },
+  {
+    label: "Infrastructure",
+    color: "#34d399",
+    items: [
+      { title: "GCP", href: "/docs/guides/gcp/", desc: "Deploy and manage Portefaix on Google Cloud Platform." },
+      { title: "AWS", href: "/docs/guides/aws/", desc: "Deploy and manage Portefaix on Amazon Web Services." },
+      { title: "Azure", href: "/docs/guides/azure/", desc: "Deploy and manage Portefaix on Microsoft Azure." },
+    ],
+  },
+  {
+    label: "Reference",
+    color: "#fb923c",
+    items: [
+      { title: "Components", href: "/docs/reference/components/", desc: "Full inventory of platform components and their roles." },
+      { title: "Helm Charts Hub", href: "/docs/reference/hub/", desc: "Curated Helm chart registry for Portefaix." },
+      { title: "Policies", href: "/docs/reference/policies/", desc: "Kyverno and OPA policy catalogue with policy codes." },
+    ],
+  },
+];
+---
+
+<DocsLayout title="Documentation">
+  <p class="doc-eyebrow">// docs</p>
+
+  <h1>Portefaix Documentation</h1>
+
+  <p>
+    Portefaix is a complete, open-source platform engineering toolkit for building production-grade
+    Kubernetes platforms on any cloud. These docs cover every layer of the stack — from bootstrapping
+    infrastructure with Terraform, to applying GitOps with ArgoCD or FluxCD, to enforcing policies
+    with Kyverno and OPA.
+  </p>
+
+  <h2>Platform Sub-projects</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sub-project</th>
+        <th>Description</th>
+        <th>Repository</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>portefaix-kubernetes</strong></td>
+        <td>Production Kubernetes configurations: operators, GitOps, observability.</td>
+        <td><a href="https://github.com/portefaix/portefaix-kubernetes" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>portefaix-infrastructure</strong></td>
+        <td>Terraform modules for cloud infrastructure across AWS, GCP, Azure, and more.</td>
+        <td><a href="https://github.com/portefaix/portefaix-infrastructure" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>portefaix-hub</strong></td>
+        <td>Curated Helm charts optimised for the Portefaix platform.</td>
+        <td><a href="https://github.com/portefaix/portefaix-hub" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>portefaix-policies</strong></td>
+        <td>OPA/Rego and Kyverno policies for security, compliance, and governance.</td>
+        <td><a href="https://github.com/portefaix/portefaix-policies" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  {sections.map((s) => (
+    <>
+      <h2>{s.label}</h2>
+      <ul>
+        {s.items.map((item) => (
+          <li>
+            <a href={item.href}>{item.title}</a> — {item.desc}
+          </li>
+        ))}
+      </ul>
+    </>
+  ))}
+
+  <h2>Design Principles</h2>
+
+  <p>
+    Portefaix is built on a set of core engineering principles that guide every decision across
+    all sub-projects:
+  </p>
+
+  <ul>
+    <li><strong>GitOps-first</strong> — infrastructure and application state is declared in Git and reconciled automatically.</li>
+    <li><strong>Policy-as-code</strong> — security and compliance requirements are encoded as machine-checkable policies.</li>
+    <li><strong>Cloud-agnostic</strong> — the same abstractions work across AWS, GCP, Azure, and on-premises environments.</li>
+    <li><strong>Observable by default</strong> — metrics, logs, and traces are built in, not bolted on.</li>
+    <li><strong>Open standards</strong> — built on CNCF projects, OpenTelemetry, and open specifications.</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Getting started?</strong> Begin with the <a href="/docs/guides/gitops/">GitOps Principles</a> guide
+      to understand the foundational model, then pick your cloud provider under Infrastructure.
+    </p>
+  </div>
+</DocsLayout>
