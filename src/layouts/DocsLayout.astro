@@ -26,7 +26,6 @@ const nav = [
     items: [
       { label: "GitOps Principles", href: "/docs/guides/gitops/" },
       { label: "ArgoCD", href: "/docs/guides/argocd/" },
-      { label: "FluxCD", href: "/docs/guides/fluxcd/" },
     ],
   },
   {
@@ -35,6 +34,7 @@ const nav = [
       { label: "GCP", href: "/docs/guides/gcp/" },
       { label: "AWS", href: "/docs/guides/aws/" },
       { label: "Azure", href: "/docs/guides/azure/" },
+      { label: "Scaleway", href: "/docs/guides/scaleway/" },
     ],
   },
   {
@@ -45,9 +45,38 @@ const nav = [
       { label: "Policies", href: "/docs/reference/policies/" },
     ],
   },
+  {
+    label: "Archive",
+    items: [
+      { label: "FluxCD (deprecated)", href: "/docs/guides/fluxcd/" },
+    ],
+  },
 ];
 
 const current = Astro.url.pathname.replace(/\/$/, "") || "/docs";
+
+// Flat ordered page list for prev/next navigation
+const allPages = [
+  { label: "Overview",          href: "/docs/" },
+  { label: "Community",         href: "/docs/community/" },
+  { label: "GitOps Principles", href: "/docs/guides/gitops/" },
+  { label: "ArgoCD",            href: "/docs/guides/argocd/" },
+  { label: "GCP",               href: "/docs/guides/gcp/" },
+  { label: "AWS",               href: "/docs/guides/aws/" },
+  { label: "Azure",             href: "/docs/guides/azure/" },
+  { label: "Scaleway",          href: "/docs/guides/scaleway/" },
+  { label: "Components",        href: "/docs/reference/components/" },
+  { label: "Helm Charts Hub",   href: "/docs/reference/hub/" },
+  { label: "Policies",          href: "/docs/reference/policies/" },
+];
+
+const currentIdx = allPages.findIndex((p) =>
+  p.href === "/docs/"
+    ? current === "/docs"
+    : current.startsWith(p.href.replace(/\/$/, ""))
+);
+const prevPage = currentIdx > 0 ? allPages[currentIdx - 1] : null;
+const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : null;
 ---
 
 <Layout title={`${title} — Portefaix Docs`} description={description}>
@@ -148,6 +177,27 @@ const current = Astro.url.pathname.replace(/\/$/, "") || "/docs";
 
       <article class="doc-article">
         <slot />
+
+        <!-- Prev / Next navigation -->
+        {(prevPage || nextPage) && (
+          <nav class="doc-pagination" aria-label="Page navigation">
+            <hr style="margin: 2.5rem 0 1.5rem;" />
+            <div class="doc-pagination-inner">
+              {prevPage ? (
+                <a href={prevPage.href} class="doc-pag-link doc-pag-prev">
+                  <span class="doc-pag-dir">← Previous</span>
+                  <span class="doc-pag-title">{prevPage.label}</span>
+                </a>
+              ) : <div />}
+              {nextPage ? (
+                <a href={nextPage.href} class="doc-pag-link doc-pag-next">
+                  <span class="doc-pag-dir">Next →</span>
+                  <span class="doc-pag-title">{nextPage.label}</span>
+                </a>
+              ) : <div />}
+            </div>
+          </nav>
+        )}
       </article>
     </main>
 
@@ -472,6 +522,48 @@ const current = Astro.url.pathname.replace(/\/$/, "") || "/docs";
 .doc-article :global(.callout-info)  { border-color: rgba(0,229,176,0.3); background: rgba(0,229,176,0.05); }
 .doc-article :global(.callout-warn)  { border-color: rgba(251,146,60,0.3);  background: rgba(251,146,60,0.05); }
 .doc-article :global(.callout-tip)   { border-color: rgba(52,211,153,0.3);  background: rgba(52,211,153,0.05); }
+
+/* ── Prev / Next pagination ───────────────────── */
+.doc-pagination-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.doc-pag-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--glass-b);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.doc-pag-link:hover {
+  border-color: rgba(0,229,176,0.35);
+  background: rgba(0,229,176,0.04);
+}
+
+.doc-pag-next { text-align: right; }
+
+.doc-pag-dir {
+  font-family: var(--font-m);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: #00e5b0;
+  text-transform: uppercase;
+}
+
+.doc-pag-title {
+  font-family: var(--font-b);
+  font-size: 0.92rem;
+  color: var(--t2);
+  transition: color 0.2s;
+}
+
+.doc-pag-link:hover .doc-pag-title { color: var(--t1); }
 
 /* ── Mobile layout ────────────────────────────── */
 @media (max-width: 768px) {

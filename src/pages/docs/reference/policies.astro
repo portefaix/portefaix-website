@@ -6,57 +6,75 @@ import DocsLayout from "../../../layouts/DocsLayout.astro";
 
 const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-const codeKyverno = e(`apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+const codeVap = e(`apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
 metadata:
-  name: require-labels
+  name: portefaix-require-labels
   annotations:
-    policies.kyverno.io/title: Require Labels
-    policies.kyverno.io/category: PORTEFAIX-C0001
-    policies.kyverno.io/severity: medium
+    portefaix.xyz/policy-code: PORTEFAIX-C0001
+    portefaix.xyz/severity: medium
 spec:
-  validationFailureAction: Enforce
-  background: true
-  rules:
-    - name: check-for-labels
-      match:
-        any:
-          - resources:
-              kinds: [Deployment, StatefulSet, DaemonSet]
-      validate:
-        message: "Label 'app.kubernetes.io/name' is required."
-        pattern:
-          metadata:
-            labels:
-              app.kubernetes.io/name: "?*"`);
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["deployments", "statefulsets", "daemonsets"]
+  validations:
+    - expression: >
+        object.metadata.labels != null &&
+        "app.kubernetes.io/name" in object.metadata.labels
+      message: "PORTEFAIX-C0001: Label 'app.kubernetes.io/name' is required."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: portefaix-require-labels-binding
+spec:
+  policyName: portefaix-require-labels
+  validationActions: [Deny, Audit]
+  matchResources: {}`);
 
-const codeOpa = e(`# PORTEFAIX-P0005: No latest image tag
-package portefaix.policies.p0005
+const codeVapSecurity = e(`apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: portefaix-no-privileged
+  annotations:
+    portefaix.xyz/policy-code: PORTEFAIX-P0001
+    portefaix.xyz/severity: high
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: >
+        object.spec.containers.all(c,
+          !has(c.securityContext) ||
+          !has(c.securityContext.privileged) ||
+          c.securityContext.privileged == false
+        )
+      message: "PORTEFAIX-P0001: Privileged containers are not allowed."`);
 
-violation[{"msg": msg, "details": {}}] {
-  container := input.review.object.spec.containers[_]
-  endswith(container.image, ":latest")
-  msg := sprintf(
-    "PORTEFAIX-P0005: Container '%v' must not use ':latest' image tag.",
-    [container.name]
-  )
-}`);
+const codeCi = e(`# Validate VAP policies with kubectl dry-run
+kubectl apply --dry-run=server -f policies/vap/
 
-const codeCi = e(`# Kyverno CLI test
-kyverno test policies/kyverno/
+# Run CEL expression unit tests (requires Kubernetes 1.30+)
+kubectl alpha cel-policy test --policy policies/vap/ --test-dir policies/tests/
 
-# Conftest (OPA)
-conftest test --policy policies/opa/ manifests/`);
+# Integration test against a local kind cluster
+make policy-test ENV=local`);
 
-const kyvernoPolicies = [
+const vapPolicies = [
   { code: "PORTEFAIX-C0001", name: "Require labels", desc: "All resources must have the required Portefaix labels." },
   { code: "PORTEFAIX-C0002", name: "Require team label", desc: "Resources must carry a team ownership label." },
   { code: "PORTEFAIX-C0003", name: "Require app label", desc: "Pods must carry an app.kubernetes.io/name label." },
   { code: "PORTEFAIX-C0004", name: "Require version label", desc: "Deployments must specify an app.kubernetes.io/version label." },
   { code: "PORTEFAIX-C0005", name: "Require managed-by label", desc: "Resources must declare their management tool." },
-];
-
-const opaPolicies = [
   { code: "PORTEFAIX-P0001", name: "No privileged containers", desc: "Containers must not run in privileged mode." },
   { code: "PORTEFAIX-P0002", name: "Read-only root filesystem", desc: "Container root filesystems must be read-only." },
   { code: "PORTEFAIX-P0003", name: "No host network", desc: "Pods must not use the host network namespace." },
@@ -65,21 +83,34 @@ const opaPolicies = [
 ];
 ---
 
-<DocsLayout title="Policies" description="Kyverno and OPA policy catalogue with policy codes for Portefaix.">
+<DocsLayout title="Policies" description="Kubernetes Validating Admission Policy (VAP) and CEL policy catalogue for Portefaix.">
   <p class="doc-eyebrow">// reference / policies</p>
 
   <h1>Platform Policies</h1>
 
+  <div class="callout callout-warning">
+    <p>
+      <strong>Deprecated in v2.0.0:</strong> Kyverno and OPA/Gatekeeper support are deprecated and
+      will be removed in Portefaix v2.0.0. Policies are being migrated to
+      <a href="https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/" target="_blank" rel="noopener">
+        Kubernetes Validating Admission Policy (VAP)
+      </a>
+      with CEL expressions — a built-in admission control mechanism requiring no additional webhook
+      controller. This page documents the new VAP-based policy model.
+    </p>
+  </div>
+
   <p>
     <a href="https://github.com/portefaix/portefaix-policies" target="_blank" rel="noopener">portefaix-policies</a>
-    is a library of Kubernetes admission policies implemented in both
-    <a href="https://kyverno.io" target="_blank" rel="noopener">Kyverno</a> and
-    <a href="https://www.openpolicyagent.org" target="_blank" rel="noopener">OPA/Gatekeeper</a>.
+    is a library of Kubernetes admission policies implemented as
+    <a href="https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/" target="_blank" rel="noopener">ValidatingAdmissionPolicy</a>
+    resources using
+    <a href="https://kubernetes.io/docs/reference/using-api/cel/" target="_blank" rel="noopener">CEL (Common Expression Language)</a>.
     Every policy has a unique code (e.g. <code>PORTEFAIX-C0001</code>) that appears in admission
-    webhook rejections, audit logs, and CI reports.
+    rejections, audit logs, and CI reports.
   </p>
 
-  <h2>Policy Engines</h2>
+  <h2>Policy Engine</h2>
 
   <table>
     <thead>
@@ -87,27 +118,36 @@ const opaPolicies = [
         <th>Engine</th>
         <th>Language</th>
         <th>Mode</th>
+        <th>Requirement</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><strong>Kyverno</strong></td>
+        <td><strong>Kubernetes VAP</strong></td>
+        <td>CEL expressions</td>
+        <td>Deny, Audit, Warn</td>
+        <td>Kubernetes ≥ 1.28 (GA in 1.30)</td>
+      </tr>
+      <tr>
+        <td><s>Kyverno</s> <span style="font-size:0.75em;opacity:0.6">(deprecated v2.0.0)</span></td>
         <td>YAML-native policies</td>
         <td>Enforce, Audit</td>
+        <td>Kyverno controller</td>
       </tr>
       <tr>
-        <td><strong>OPA / Gatekeeper</strong></td>
+        <td><s>OPA / Gatekeeper</s> <span style="font-size:0.75em;opacity:0.6">(deprecated v2.0.0)</span></td>
         <td>Rego</td>
         <td>Enforce, Audit</td>
+        <td>Gatekeeper controller</td>
       </tr>
     </tbody>
   </table>
 
-  <h2>Kyverno Policies</h2>
+  <h2>Policies</h2>
 
   <p>
-    Kyverno policies are deployed as <code>ClusterPolicy</code> resources. They cover validation,
-    mutation, and generation use cases.
+    All policy codes are preserved across the migration from Kyverno/OPA to VAP, ensuring
+    consistent identifiers in audit logs and tooling.
   </p>
 
   <table>
@@ -119,7 +159,7 @@ const opaPolicies = [
       </tr>
     </thead>
     <tbody>
-      {kyvernoPolicies.map((p) => (
+      {vapPolicies.map((p) => (
         <tr>
           <td><code>{p.code}</code></td>
           <td><strong>{p.name}</strong></td>
@@ -129,58 +169,37 @@ const opaPolicies = [
     </tbody>
   </table>
 
-  <h3>Example Kyverno Policy</h3>
-  <pre><code set:html={codeKyverno}></code></pre>
+  <h2>Example: Label Validation (VAP + CEL)</h2>
+  <pre><code set:html={codeVap}></code></pre>
 
-  <h2>OPA / Gatekeeper Policies</h2>
-
-  <p>
-    OPA policies are written in Rego and deployed as Gatekeeper <code>ConstraintTemplate</code>
-    and <code>Constraint</code> resource pairs.
-  </p>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Policy</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      {opaPolicies.map((p) => (
-        <tr>
-          <td><code>{p.code}</code></td>
-          <td><strong>{p.name}</strong></td>
-          <td>{p.desc}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-
-  <h3>Example OPA Policy</h3>
-  <pre><code set:html={codeOpa}></code></pre>
+  <h2>Example: Security Policy (VAP + CEL)</h2>
+  <pre><code set:html={codeVapSecurity}></code></pre>
 
   <h2>Policy Modes</h2>
 
+  <p>
+    <code>ValidatingAdmissionPolicyBinding</code> controls validation actions per binding:
+  </p>
+
   <ul>
-    <li><strong>Enforce</strong> — reject non-compliant resources at admission time. Use for critical security policies.</li>
-    <li><strong>Audit</strong> — allow resources but report violations. Use during rollout or for informational policies.</li>
+    <li><strong>Deny</strong> — reject non-compliant resources at admission time. Use for critical security policies.</li>
+    <li><strong>Audit</strong> — allow resources but emit audit events. Use during rollout or for informational policies.</li>
+    <li><strong>Warn</strong> — allow resources but return a warning to the caller. Useful during migration.</li>
   </ul>
 
-  <div class="callout callout-warn">
+  <div class="callout callout-tip">
     <p>
-      <strong>Gradual rollout:</strong> Switch new policies to <code>Audit</code> mode first.
-      Review violation reports, fix workloads, then switch to <code>Enforce</code>.
-      Jumping straight to <code>Enforce</code> on a running cluster can cause outages.
+      <strong>Gradual rollout:</strong> Use <code>Warn</code> mode first to surface violations
+      without blocking workloads. Once all existing resources comply, switch to <code>Deny</code>.
+      Kubernetes 1.30+ supports all three modes simultaneously on a single binding.
     </p>
   </div>
 
   <h2>CI Integration</h2>
 
   <p>
-    All policies are tested in CI using <a href="https://kyverno.io/docs/kyverno-cli/" target="_blank" rel="noopener">Kyverno CLI</a>
-    and <a href="https://www.conftest.dev" target="_blank" rel="noopener">Conftest</a> with a suite of
+    All policies are tested in CI using <code>kubectl --dry-run=server</code> against a local
+    <a href="https://kind.sigs.k8s.io" target="_blank" rel="noopener">KinD</a> cluster with
     pass/fail YAML fixtures:
   </p>
 

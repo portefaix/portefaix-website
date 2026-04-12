@@ -67,6 +67,15 @@ const codeDestroy = e(`terraform destroy -var-file=terraform.tfvars`);
 
   <h2>Architecture</h2>
 
+  <div class="diagram-wrapper" style="margin: 1.5rem 0; border: 1px solid rgba(0,229,176,0.15); border-radius: 4px; overflow: hidden; background: #071221;">
+    <div style="padding: 0.5rem 1rem; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(0,229,176,0.1); display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #00bcd4; opacity: 0.8;">// infrastructure blueprint · Shared VPC · Private GKE · LGTM</span>
+    </div>
+    <a href="/diagrams/architecture-gcp.svg" target="_blank" rel="noopener" title="Open full-size GCP architecture diagram" style="display: block;">
+      <img src="/diagrams/architecture-gcp.svg" alt="Portefaix GCP Infrastructure Architecture — multi-environment Shared VPC, private GKE, LGTM observability stack" style="width: 100%; height: auto; display: block;" loading="lazy"/>
+    </a>
+  </div>
+
   <p>The GCP infrastructure stack is structured around these core components:</p>
 
   <table>
@@ -96,7 +105,7 @@ const codeDestroy = e(`terraform destroy -var-file=terraform.tfvars`);
       <tr>
         <td>Secrets</td>
         <td>Cloud KMS, Secret Manager</td>
-        <td>SOPS encryption, runtime secrets</td>
+        <td>External Secrets Operator with GCP Secret Manager</td>
       </tr>
       <tr>
         <td>DNS</td>

@@ -19,7 +19,7 @@ const components = [
     color: "#818cf8",
     items: [
       { name: "ArgoCD", role: "Application delivery and sync", url: "https://argo-cd.readthedocs.io" },
-      { name: "FluxCD", role: "Infrastructure reconciliation and image automation", url: "https://fluxcd.io" },
+      { name: "FluxCD (deprecated in v2.0.0)", role: "Infrastructure reconciliation and image automation — replaced by ArgoCD", url: "https://fluxcd.io" },
       { name: "Argo Rollouts", role: "Progressive delivery (canary, blue-green)", url: "https://argoproj.github.io/argo-rollouts/" },
       { name: "Argo Workflows", role: "Kubernetes-native workflow engine", url: "https://argoproj.github.io/workflows/" },
     ],
@@ -42,8 +42,9 @@ const components = [
     category: "Security & Policy",
     color: "#fb923c",
     items: [
-      { name: "Kyverno", role: "Kubernetes-native policy engine", url: "https://kyverno.io" },
-      { name: "OPA / Gatekeeper", role: "Open Policy Agent admission control", url: "https://www.openpolicyagent.org" },
+      { name: "Validating Admission Policy (VAP)", role: "Kubernetes-native admission control with CEL expressions (GA in 1.30)", url: "https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/" },
+      { name: "Kyverno (deprecated v2.0.0)", role: "Deprecated — replaced by Kubernetes VAP + CEL", url: "https://kyverno.io" },
+      { name: "OPA / Gatekeeper (deprecated v2.0.0)", role: "Deprecated — replaced by Kubernetes VAP + CEL", url: "https://www.openpolicyagent.org" },
       { name: "Falco", role: "Runtime security and threat detection", url: "https://falco.org" },
       { name: "Trivy Operator", role: "Vulnerability and misconfiguration scanning", url: "https://github.com/aquasecurity/trivy-operator" },
       { name: "cert-manager", role: "TLS certificate lifecycle management", url: "https://cert-manager.io" },
@@ -72,8 +73,11 @@ const components = [
     category: "Secrets",
     color: "#f472b6",
     items: [
-      { name: "SOPS", role: "Secret encryption for GitOps", url: "https://github.com/getsops/sops" },
-      { name: "HashiCorp Vault", role: "Centralised secrets management (optional)", url: "https://www.vaultproject.io" },
+      { name: "External Secrets Operator", role: "Sync secrets from external stores into Kubernetes", url: "https://external-secrets.io" },
+      { name: "Akeyless", role: "SaaS secrets management backend", url: "https://www.akeyless.io" },
+      { name: "Infisical", role: "Open-source secrets management backend", url: "https://infisical.com" },
+      { name: "AWS Secrets Manager", role: "AWS-native secrets backend", url: "https://aws.amazon.com/secrets-manager/" },
+      { name: "HashiCorp Vault", role: "Self-hosted secrets management backend (optional)", url: "https://www.vaultproject.io" },
     ],
   },
 ];

@@ -54,7 +54,7 @@ const codeArgo = e(`spec:
   <h3>OCI Registry</h3>
   <pre><code set:html={codeOci}></code></pre>
 
-  <h3>In FluxCD HelmRelease</h3>
+  <h3>In FluxCD HelmRelease <span style="font-size:0.75em;opacity:0.6">(deprecated in v2.0.0)</span></h3>
   <pre><code set:html={codeFlux}></code></pre>
 
   <h3>In ArgoCD Application</h3>
@@ -80,7 +80,7 @@ const codeArgo = e(`spec:
       </tr>
       <tr>
         <td><strong>Security</strong></td>
-        <td>Kyverno policies, Falco rules packaged as Helm charts</td>
+        <td>Validating Admission Policies, Falco rules packaged as Helm charts</td>
       </tr>
       <tr>
         <td><strong>Applications</strong></td>

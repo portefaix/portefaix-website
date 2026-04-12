@@ -26,19 +26,22 @@ const codeKubeconfig = e(`aws eks update-kubeconfig \\
   --name portefaix-production \\
   --region eu-west-1`);
 
-const codeIRSA = e(`# Example: external-dns IAM role
-module "external_dns_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+const codeIRSA = e(`# EKS Pod Identity association (replaces IRSA / OIDC thumbprint)
+resource "aws_eks_pod_identity_association" "external_dns" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "external-dns"
+  service_account = "external-dns"
+  role_arn        = module.external_dns_role.iam_role_arn
+}
 
-  role_name             = "external-dns"
-  attach_external_dns_policy = true
+# EKS cluster — Pod Identity enabled, IRSA disabled
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.6"
 
-  oidc_providers = {
-    ex = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["external-dns:external-dns"]
-    }
-  }
+  enable_pod_identity             = true
+  create_pod_identity_association = true
+  enable_irsa                     = false
 }`);
 
 const codeInspec = e(`# Run InSpec tests against AWS
@@ -60,6 +63,15 @@ inspec exec portefaix-inspec-aws \\
   </p>
 
   <h2>Architecture</h2>
+
+  <div class="diagram-wrapper" style="margin: 1.5rem 0; border: 1px solid rgba(0,229,176,0.15); border-radius: 4px; overflow: hidden; background: #071221;">
+    <div style="padding: 0.5rem 1rem; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(0,229,176,0.1); display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #00bcd4; opacity: 0.8;">// infrastructure blueprint · eu-west-1</span>
+    </div>
+    <a href="/diagrams/architecture-aws.svg" target="_blank" rel="noopener" title="Open full-size architecture diagram" style="display: block;">
+      <img src="/diagrams/architecture-aws.svg" alt="Portefaix AWS Infrastructure Architecture — Blueprint diagram showing VPC, EKS, observability stack, and AWS services" style="width: 100%; height: auto; display: block;" loading="lazy"/>
+    </a>
+  </div>
 
   <table>
     <thead>
@@ -88,7 +100,7 @@ inspec exec portefaix-inspec-aws \\
       <tr>
         <td>Secrets</td>
         <td>AWS KMS</td>
-        <td>SOPS encryption, EKS envelope encryption</td>
+        <td>External Secrets Operator with AWS Secrets Manager</td>
       </tr>
       <tr>
         <td>DNS</td>
@@ -128,12 +140,13 @@ inspec exec portefaix-inspec-aws \\
   <h3>3. Configure kubectl</h3>
   <pre><code set:html={codeKubeconfig}></code></pre>
 
-  <h2>IAM Roles for Service Accounts (IRSA)</h2>
+  <h2>EKS Pod Identity</h2>
 
   <p>
-    Portefaix uses IRSA to grant Kubernetes workloads fine-grained access to AWS services without
-    static credentials. Each platform component (external-dns, cluster-autoscaler, Velero, Loki, etc.)
-    gets its own IAM role bound to a Kubernetes ServiceAccount via OIDC.
+    Portefaix uses <strong>EKS Pod Identity</strong> (the modern successor to IRSA) to grant Kubernetes
+    workloads fine-grained access to AWS services without static credentials. Each platform component
+    (external-dns, Karpenter, Loki, ESO, etc.) gets its own IAM role bound to a Kubernetes
+    ServiceAccount — no OIDC thumbprint management required.
   </p>
 
   <pre><code set:html={codeIRSA}></code></pre>

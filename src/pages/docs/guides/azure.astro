@@ -44,10 +44,19 @@ az aks update \\
   --enable-oidc-issuer \\
   --enable-workload-identity`);
 
-const codeSops = e(`# .sops.yaml
-creation_rules:
-  - path_regex: .*.yaml
-    azure_keyvault: https://portefaix-kv.vault.azure.net/keys/sops/<key-id>`);
+const codeEsoAzure = e(`# SecretStore — Azure Key Vault backend
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: azure-store
+  namespace: my-app
+spec:
+  provider:
+    azurekv:
+      vaultUrl: "https://portefaix-kv.vault.azure.net"
+      authType: WorkloadIdentity
+      serviceAccountRef:
+        name: external-secrets-sa`);
 
 const codeInspec = e(`# Run InSpec tests against Azure
 inspec exec portefaix-inspec-azure \\
@@ -68,6 +77,15 @@ inspec exec portefaix-inspec-azure \\
   </p>
 
   <h2>Architecture</h2>
+
+  <div class="diagram-wrapper" style="margin: 1.5rem 0; border: 1px solid rgba(0,229,176,0.15); border-radius: 4px; overflow: hidden; background: #071221;">
+    <div style="padding: 0.5rem 1rem; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(0,229,176,0.1); display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #00bcd4; opacity: 0.8;">// infrastructure blueprint · Hub-and-Spoke VNet · AKS · Cilium</span>
+    </div>
+    <a href="/diagrams/architecture-azure.svg" target="_blank" rel="noopener" title="Open full-size Azure architecture diagram" style="display: block;">
+      <img src="/diagrams/architecture-azure.svg" alt="Portefaix Azure Infrastructure Architecture — Hub-and-Spoke VNet, AKS with Cilium, Workload Identity, LGTM observability" style="width: 100%; height: auto; display: block;" loading="lazy"/>
+    </a>
+  </div>
 
   <table>
     <thead>
@@ -96,7 +114,7 @@ inspec exec portefaix-inspec-azure \\
       <tr>
         <td>Secrets</td>
         <td>Azure Key Vault</td>
-        <td>SOPS encryption, runtime secrets</td>
+        <td>External Secrets Operator with Azure Key Vault</td>
       </tr>
       <tr>
         <td>DNS</td>
@@ -152,16 +170,17 @@ inspec exec portefaix-inspec-azure \\
   <h2>Key Vault Integration</h2>
 
   <p>
-    Azure Key Vault is used as the SOPS KMS backend for encrypting Kubernetes secrets before
-    committing them to Git:
+    Azure Key Vault is used as the secrets backend for the
+    <a href="https://external-secrets.io" target="_blank" rel="noopener">External Secrets Operator</a>.
+    Secrets are stored in Key Vault and synchronised into Kubernetes at runtime — nothing is committed to Git:
   </p>
 
-  <pre><code set:html={codeSops}></code></pre>
+  <pre><code set:html={codeEsoAzure}></code></pre>
 
   <div class="callout callout-info">
     <p>
-      <strong>Note:</strong> The Workload Identity used by Flux's Kustomize controller must have
-      <code>Key Vault Crypto User</code> permission on the Key Vault to perform SOPS decryption.
+      <strong>Note:</strong> The Workload Identity used by the External Secrets Operator must have
+      <code>Key Vault Secrets User</code> permission on the Key Vault to read secrets.
     </p>
   </div>
 

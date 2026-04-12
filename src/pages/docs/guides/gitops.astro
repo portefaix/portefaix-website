@@ -14,7 +14,7 @@ const codeStructure = e(`portefaix-kubernetes/
 │       └── staging/
 ├── stacks/
 │   ├── observability/      # Grafana, Prometheus, Loki, Tempo
-│   ├── security/           # Falco, Kyverno, Trivy
+│   ├── security/           # Falco, Trivy, VAP policies
 │   ├── networking/         # Cilium, cert-manager, external-dns
 │   └── platform/           # Crossplane, ArgoCD/FluxCD itself
 └── apps/
@@ -51,7 +51,7 @@ const codeStructure = e(`portefaix-kubernetes/
 
   <h3>3. Pulled Automatically</h3>
   <p>
-    Software agents (ArgoCD, FluxCD) continuously observe the desired state in Git and automatically
+    Software agents (ArgoCD, and FluxCD in v1.x) continuously observe the desired state in Git and automatically
     apply it to the target system. Rather than pushing changes from a CI pipeline, the cluster
     <em>pulls</em> its own desired state. This eliminates the need to grant CI systems write access
     to production clusters.
@@ -85,8 +85,8 @@ const codeStructure = e(`portefaix-kubernetes/
         <td><a href="/docs/guides/argocd/">ArgoCD Guide →</a></td>
       </tr>
       <tr>
-        <td><a href="https://fluxcd.io" target="_blank" rel="noopener">FluxCD</a></td>
-        <td>Infrastructure reconciliation, secret management with SOPS, CI/CD automation</td>
+        <td><a href="https://fluxcd.io" target="_blank" rel="noopener">FluxCD</a> <span style="font-size:0.75em;opacity:0.6">(deprecated v2.0.0)</span></td>
+        <td>Infrastructure reconciliation, secret management with External Secrets Operator, CI/CD automation</td>
         <td><a href="/docs/guides/fluxcd/">FluxCD Guide →</a></td>
       </tr>
     </tbody>
@@ -103,16 +103,29 @@ const codeStructure = e(`portefaix-kubernetes/
   <h2>Secrets Management</h2>
 
   <p>
-    Portefaix uses <a href="https://github.com/getsops/sops" target="_blank" rel="noopener">SOPS</a>
-    (Secrets OPerationS) to encrypt secrets before committing them to Git. Decryption keys are managed
-    via cloud KMS (GCP KMS, AWS KMS) or PGP, so secrets are safe at rest in the repository while
-    being automatically decrypted during reconciliation.
+    Portefaix uses the
+    <a href="https://external-secrets.io" target="_blank" rel="noopener">External Secrets Operator</a>
+    (ESO) to synchronise secrets from external SaaS providers into Kubernetes. Secrets never live in
+    Git — they are stored in a dedicated secret store and pulled into the cluster at runtime via
+    <code>SecretStore</code> and <code>ExternalSecret</code> custom resources.
   </p>
+
+  <p>Supported backends include:</p>
+
+  <ul>
+    <li><a href="https://www.akeyless.io" target="_blank" rel="noopener">Akeyless</a></li>
+    <li><a href="https://infisical.com" target="_blank" rel="noopener">Infisical</a></li>
+    <li>AWS Secrets Manager</li>
+    <li>GCP Secret Manager</li>
+    <li>Azure Key Vault</li>
+    <li>HashiCorp Vault</li>
+  </ul>
 
   <div class="callout callout-info">
     <p>
-      <strong>Key insight:</strong> Never commit unencrypted secrets to Git — even in a private repository.
-      SOPS encrypts values while preserving the YAML/JSON structure, making diffs readable.
+      <strong>Key insight:</strong> Secrets are never committed to Git in any form.
+      The <code>ExternalSecret</code> resource in Git is just a reference — the actual value
+      is fetched from the external store at reconciliation time.
     </p>
   </div>
 </DocsLayout>

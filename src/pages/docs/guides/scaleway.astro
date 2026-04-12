@@ -1,0 +1,231 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeVars = e(`# infrastructure/scaleway/sandbox/terraform.tfvars
+region      = "fr-par"
+zone        = "fr-par-1"
+environment = "sandbox"
+project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+cluster_name = "portefaix-sandbox"`);
+
+const codeInit = e(`cd infrastructure/scaleway/kapsule/sandbox
+
+terraform init \\
+  -backend-config="bucket=portefaix-tfstate" \\
+  -backend-config="key=scaleway/kapsule/sandbox/terraform.tfstate" \\
+  -backend-config="region=fr-par"
+
+terraform plan -out=tfplan
+terraform apply tfplan`);
+
+const codeKubeconfig = e(`# Install the Scaleway CLI plugin for kubectl
+scw k8s kubeconfig install <cluster-id>
+
+# Or export kubeconfig directly
+scw k8s kubeconfig get <cluster-id> > ~/.kube/config-scaleway
+export KUBECONFIG=~/.kube/config-scaleway`);
+
+const codeESO = e(`# SecretStore — Scaleway Secret Manager backend
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: scaleway-store
+  namespace: my-app
+spec:
+  provider:
+    scaleway:
+      region: fr-par
+      projectId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      accessKey:
+        secretRef:
+          name: scaleway-credentials
+          key: access-key
+      secretKey:
+        secretRef:
+          name: scaleway-credentials
+          key: secret-key`);
+
+const codeSpacelift = e(`# spacelift/tfvars/sandbox.auto.tfvars
+environment  = "sandbox"
+region       = "fr-par"
+zone         = "fr-par-1"
+project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+stacks = {
+  vpc = {
+    project_root = "terraform/scaleway/vpc/sandbox"
+    branch       = "main"
+    labels       = ["vpc"]
+    environment  = "sandbox"
+    dependencies = []
+  }
+  kapsule = {
+    project_root = "terraform/scaleway/kapsule/sandbox"
+    branch       = "main"
+    labels       = ["kapsule"]
+    environment  = "sandbox"
+    dependencies = ["vpc"]
+  }
+}`);
+---
+
+<DocsLayout title="Scaleway" description="Deploy and manage Portefaix on Scaleway using Kapsule managed Kubernetes.">
+  <p class="doc-eyebrow">// guides / infrastructure / scaleway</p>
+
+  <h1>Scaleway</h1>
+
+  <p>
+    Portefaix deploys a managed Kubernetes cluster on Scaleway using <strong>Kapsule</strong> — Scaleway's
+    managed K8s service — backed by a private VPC with a public gateway, Cilium CNI, and the full
+    LGTM observability stack using Scaleway Object Storage as the backend.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Environment:</strong> The Scaleway deployment currently targets a <code>sandbox</code> environment,
+      making it ideal for experimentation, development, and platform testing before committing to a
+      full multi-environment rollout.
+    </p>
+  </div>
+
+  <h2>Architecture</h2>
+
+  <div class="diagram-wrapper" style="margin: 1.5rem 0; border: 1px solid rgba(0,229,176,0.15); border-radius: 4px; overflow: hidden; background: #071221;">
+    <div style="padding: 0.5rem 1rem; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(0,229,176,0.1); display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #00bcd4; opacity: 0.8;">// infrastructure blueprint · fr-par · Kapsule · Cilium · LGTM + Cockpit</span>
+    </div>
+    <a href="/diagrams/architecture-scaleway.svg" target="_blank" rel="noopener" title="Open full-size Scaleway architecture diagram" style="display: block;">
+      <img src="/diagrams/architecture-scaleway.svg" alt="Portefaix Scaleway Infrastructure Architecture — Kapsule, private VPC, LGTM observability, ESO, Spacelift" style="width: 100%; height: auto; display: block;" loading="lazy"/>
+    </a>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Scaleway Service</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Kubernetes cluster</td>
+        <td>Kapsule</td>
+        <td>Managed container orchestration</td>
+      </tr>
+      <tr>
+        <td>Networking</td>
+        <td>VPC Private Network, Public Gateway</td>
+        <td>Private cluster networking + NAT egress</td>
+      </tr>
+      <tr>
+        <td>CNI</td>
+        <td>Cilium</td>
+        <td>eBPF-based networking and network policy</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>Scaleway Secret Manager + ESO</td>
+        <td>External Secrets Operator integration</td>
+      </tr>
+      <tr>
+        <td>Registry</td>
+        <td>Scaleway Container Registry</td>
+        <td>Container image namespaces (public/private)</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>Scaleway Object Storage</td>
+        <td>Mimir, Loki, and Tempo backends</td>
+      </tr>
+      <tr>
+        <td>Observability dashboard</td>
+        <td>Scaleway Cockpit</td>
+        <td>Managed metrics and log dashboard (SaaS)</td>
+      </tr>
+      <tr>
+        <td>IaC orchestration</td>
+        <td>Spacelift / Terraform Cloud</td>
+        <td>Stack-based IaC pipeline with OpenTofu</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>Scaleway account with a project created</li>
+    <li>Scaleway CLI installed: <code>brew install scaleway-cli</code> or see <a href="https://www.scaleway.com/en/cli/" target="_blank" rel="noopener">scaleway.com/en/cli</a></li>
+    <li>CLI configured: <code>scw init</code></li>
+    <li>Terraform ≥ 1.5</li>
+    <li><code>kubectl</code> and <code>helm</code></li>
+  </ul>
+
+  <h2>Deploying Infrastructure</h2>
+
+  <h3>1. Configure Variables</h3>
+  <pre><code set:html={codeVars}></code></pre>
+
+  <h3>2. Deploy VPC First, then Kapsule</h3>
+  <p>
+    Components are deployed in dependency order: VPC → Kapsule → Observability → Registry → ESO.
+    Each lives in its own Terraform root under <code>scaleway/&lt;component&gt;/sandbox/</code>.
+  </p>
+  <pre><code set:html={codeInit}></code></pre>
+
+  <h3>3. Configure kubectl</h3>
+  <pre><code set:html={codeKubeconfig}></code></pre>
+
+  <h2>External Secrets Operator</h2>
+
+  <p>
+    Portefaix uses the <a href="https://external-secrets.io" target="_blank" rel="noopener">External Secrets Operator</a>
+    (ESO) to sync secrets from Scaleway Secret Manager into Kubernetes — no static credentials
+    are stored in the cluster or in Git.
+  </p>
+
+  <pre><code set:html={codeESO}></code></pre>
+
+  <h2>Spacelift Orchestration</h2>
+
+  <p>
+    The Scaleway infrastructure uses <a href="https://spacelift.io" target="_blank" rel="noopener">Spacelift</a>
+    as the primary IaC orchestration layer, with <strong>OpenTofu</strong> as the workflow tool.
+    Stacks are organised in a three-tier space hierarchy: <code>root → project → &lbrace;environment&rbrace;</code>,
+    with explicit dependency chains to enforce deployment ordering.
+  </p>
+
+  <pre><code set:html={codeSpacelift}></code></pre>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Tip:</strong> Spacelift's <code>autodeploy: false</code> default means all applies require
+      manual approval — set it to <code>true</code> on non-production stacks to speed up iteration.
+      Terraform Cloud workspaces are also provided as an alternative IaC backend.
+    </p>
+  </div>
+
+  <h2>Observability Stack</h2>
+
+  <p>
+    The LGTM stack is deployed to the Kapsule cluster via the
+    <code>nlamirault/observability/scaleway</code> Terraform module (v1.2.2):
+  </p>
+
+  <ul>
+    <li><strong>Prometheus / Mimir</strong> — metrics collection and long-term storage in Scaleway Object Storage</li>
+    <li><strong>Loki</strong> — log aggregation with Object Storage backend</li>
+    <li><strong>Tempo</strong> — distributed tracing with Object Storage backend</li>
+    <li><strong>Scaleway Cockpit</strong> — managed dashboard SaaS, available at no extra cost with your Scaleway account</li>
+  </ul>
+
+  <p>
+    API credentials for each component are injected at runtime via the External Secrets Operator —
+    no long-lived credentials are baked into Helm values.
+  </p>
+</DocsLayout>

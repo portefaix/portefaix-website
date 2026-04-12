@@ -13,37 +13,41 @@ const codeBootstrap = e(`flux bootstrap github \\
   --path=clusters/<cloud>/<env> \\
   --personal`);
 
-const codeGcpKms = e(`# Create a KMS key ring and key
-gcloud kms keyrings create sops --location global
-gcloud kms keys create flux \\
-  --location global \\
-  --keyring sops \\
-  --purpose encryption
-
-# Configure SOPS
-cat > .sops.yaml <<EOF
-creation_rules:
-  - path_regex: .*.yaml
-    gcp_kms: projects/<project>/locations/global/keyRings/sops/cryptoKeys/flux
-EOF
-
-# Encrypt a secret
-sops -e secret.yaml > secret.enc.yaml`);
-
-const codeAge = e(`# Generate an AGE key pair
-age-keygen -o age.agekey
-
-# Create Flux secret for decryption
-kubectl create secret generic sops-age \\
-  --namespace=flux-system \\
-  --from-file=age.agekey=age.agekey
-
-# Configure Kustomization to use AGE
+const codeEsoStore = e(`# SecretStore — points to the external backend
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: akeyless-store
+  namespace: my-app
 spec:
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age`);
+  provider:
+    akeyless:
+      akeylessGWApiURL: "https://api.akeyless.io"
+      authSecretRef:
+        accessID:
+          name: akeyless-auth
+          key: access-id
+        accessType:
+          name: akeyless-auth
+          key: access-type`);
+
+const codeEsoSecret = e(`# ExternalSecret — declares which secret to fetch
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: db-credentials
+  namespace: my-app
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: akeyless-store
+    kind: SecretStore
+  target:
+    name: db-credentials   # resulting Kubernetes Secret
+  data:
+    - secretKey: password
+      remoteRef:
+        key: /portefaix/prod/db/password`);
 
 const codeStructure = e(`clusters/gcp/production/
 ├── flux-system/           # Flux controllers
@@ -75,15 +79,23 @@ const codeSyncPolicy = e(`spec:
       - ServerSideApply=true`);
 ---
 
-<DocsLayout title="FluxCD" description="GitOps with FluxCD, SOPS secrets, and CI/CD pipelines in Portefaix.">
+<DocsLayout title="FluxCD" description="GitOps with FluxCD and CI/CD pipelines in Portefaix.">
   <p class="doc-eyebrow">// guides / fluxcd</p>
 
   <h1>FluxCD</h1>
 
+  <div class="callout callout-warning">
+    <p>
+      <strong>Deprecated in v2.0.0:</strong> FluxCD support is deprecated and will be removed in
+      Portefaix v2.0.0. <a href="/docs/guides/argocd/">ArgoCD</a> is the recommended GitOps engine
+      going forward. This page is kept for reference for users still on v1.x.
+    </p>
+  </div>
+
   <p>
     <a href="https://fluxcd.io" target="_blank" rel="noopener">FluxCD</a> is a set of continuous and
     progressive delivery solutions for Kubernetes, built on the GitOps Toolkit. In Portefaix, FluxCD
-    manages infrastructure-level reconciliation and integrates tightly with SOPS for secret management.
+    manages infrastructure-level reconciliation and works alongside the External Secrets Operator for secret management.
   </p>
 
   <h2>GitOps Toolkit</h2>
@@ -134,19 +146,23 @@ const codeSyncPolicy = e(`spec:
     repository so Flux can pull updates.
   </p>
 
-  <h2>Secret Management with SOPS</h2>
+  <h2>Secret Management with External Secrets Operator</h2>
 
   <p>
-    Portefaix uses <a href="https://github.com/getsops/sops" target="_blank" rel="noopener">SOPS</a>
-    with cloud KMS to encrypt secrets before committing them to Git.
-    Flux's Kustomize controller natively decrypts SOPS-encrypted files during reconciliation.
+    Portefaix uses the
+    <a href="https://external-secrets.io" target="_blank" rel="noopener">External Secrets Operator</a>
+    to pull secrets from external SaaS providers into Kubernetes at runtime.
+    Secrets are never stored in Git. Supported backends include
+    <a href="https://www.akeyless.io" target="_blank" rel="noopener">Akeyless</a>,
+    <a href="https://infisical.com" target="_blank" rel="noopener">Infisical</a>,
+    AWS Secrets Manager, GCP Secret Manager, Azure Key Vault, and HashiCorp Vault.
   </p>
 
-  <h3>Setup with GCP KMS</h3>
-  <pre><code set:html={codeGcpKms}></code></pre>
+  <h3>SecretStore — connect to the backend</h3>
+  <pre><code set:html={codeEsoStore}></code></pre>
 
-  <h3>Setup with AGE (local/on-prem)</h3>
-  <pre><code set:html={codeAge}></code></pre>
+  <h3>ExternalSecret — declare what to fetch</h3>
+  <pre><code set:html={codeEsoSecret}></code></pre>
 
   <h2>Kustomization Structure</h2>
 

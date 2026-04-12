@@ -11,7 +11,6 @@ const sections = [
     items: [
       { title: "GitOps Principles", href: "/docs/guides/gitops/", desc: "Core OpenGitOps principles applied across the platform." },
       { title: "ArgoCD", href: "/docs/guides/argocd/", desc: "Bootstrap stacks and deploy applications with ArgoCD." },
-      { title: "FluxCD", href: "/docs/guides/fluxcd/", desc: "GitOps with FluxCD, SOPS secrets, and CI/CD pipelines." },
     ],
   },
   {
@@ -21,6 +20,7 @@ const sections = [
       { title: "GCP", href: "/docs/guides/gcp/", desc: "Deploy and manage Portefaix on Google Cloud Platform." },
       { title: "AWS", href: "/docs/guides/aws/", desc: "Deploy and manage Portefaix on Amazon Web Services." },
       { title: "Azure", href: "/docs/guides/azure/", desc: "Deploy and manage Portefaix on Microsoft Azure." },
+      { title: "Scaleway", href: "/docs/guides/scaleway/", desc: "Deploy and manage Portefaix on Scaleway with Kapsule managed Kubernetes." },
     ],
   },
   {
@@ -29,7 +29,7 @@ const sections = [
     items: [
       { title: "Components", href: "/docs/reference/components/", desc: "Full inventory of platform components and their roles." },
       { title: "Helm Charts Hub", href: "/docs/reference/hub/", desc: "Curated Helm chart registry for Portefaix." },
-      { title: "Policies", href: "/docs/reference/policies/", desc: "Kyverno and OPA policy catalogue with policy codes." },
+      { title: "Policies", href: "/docs/reference/policies/", desc: "Validating Admission Policy (VAP) + CEL policy catalogue with policy codes." },
     ],
   },
 ];
@@ -43,7 +43,7 @@ const sections = [
   <p>
     Portefaix is a complete, open-source platform engineering toolkit for building production-grade
     Kubernetes platforms on any cloud. These docs cover every layer of the stack — from bootstrapping
-    infrastructure with Terraform, to applying GitOps with ArgoCD or FluxCD, to enforcing policies
+    infrastructure with Terraform, to applying GitOps with ArgoCD, to enforcing policies
     with Kyverno and OPA.
   </p>
 
@@ -113,6 +113,13 @@ const sections = [
     <p>
       <strong>Getting started?</strong> Begin with the <a href="/docs/guides/gitops/">GitOps Principles</a> guide
       to understand the foundational model, then pick your cloud provider under Infrastructure.
+    </p>
+  </div>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>FluxCD is deprecated</strong> as of Portefaix v2.0.0. ArgoCD is the recommended GitOps engine going forward.
+      The FluxCD guide is preserved for reference at <a href="/docs/guides/fluxcd/">docs/guides/fluxcd</a>.
     </p>
   </div>
 </DocsLayout>
