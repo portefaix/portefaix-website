@@ -1,0 +1,163 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="GitOps Principles" description="Understanding the four OpenGitOps principles and how Portefaix applies them.">
+  <p class="doc-eyebrow">// explanation · foundations</p>
+
+  <h1>GitOps Principles</h1>
+
+  <p>
+    GitOps is an operational model for managing infrastructure and application configuration
+    by using Git as the single source of truth. This page explains what GitOps means for
+    Portefaix and why the platform is designed around it.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Reading this page</strong> will help you understand the reasoning behind how
+      Portefaix is structured, why all changes flow through Git, and what the reconciliation
+      loop achieves. If you want to perform a specific GitOps task, see the
+      <a href="/docs/how-to/bootstrap-argocd/">ArgoCD bootstrap how-to</a> instead.
+    </p>
+  </div>
+
+  <h2>The four OpenGitOps principles</h2>
+
+  <p>
+    Portefaix follows the <a href="https://opengitops.dev/" target="_blank" rel="noopener">OpenGitOps</a>
+    specification, which defines four principles that together describe a complete GitOps system.
+  </p>
+
+  <h3>1. Declarative</h3>
+
+  <p>
+    A system managed by GitOps must have its <em>desired state</em> expressed declaratively. Rather
+    than writing scripts that describe how to reach a state, you write manifests that describe
+    what the state should be.
+  </p>
+
+  <p>
+    In Portefaix, every component — from Kubernetes workloads to Terraform infrastructure — is
+    expressed as declarative configuration: Kubernetes YAML, Helm values files, and Terraform
+    HCL. Nothing is configured by running imperative commands in production.
+  </p>
+
+  <h3>2. Versioned and immutable</h3>
+
+  <p>
+    Desired state is stored in a system that enforces immutability and retains a complete
+    version history. Git is the canonical implementation: every change is a commit, commits
+    are content-addressed, and history is append-only.
+  </p>
+
+  <p>
+    This gives Portefaix full auditability. Every change to cluster state has a corresponding
+    Git commit with an author, timestamp, and message. Rolling back is as simple as reverting
+    a commit — the reconciler automatically restores the previous state.
+  </p>
+
+  <h3>3. Pulled automatically</h3>
+
+  <p>
+    Software agents automatically pull the desired state declarations from the source. This is
+    the inversion that distinguishes GitOps from traditional push-based CI/CD: nothing pushes
+    configuration into the cluster from outside.
+  </p>
+
+  <p>
+    ArgoCD is Portefaix's pull agent. It polls the Git repository (and responds to webhooks for
+    low-latency updates), computes the diff between desired and actual state, and applies changes.
+    Cluster credentials never need to leave the cluster perimeter.
+  </p>
+
+  <h3>4. Continuously reconciled</h3>
+
+  <p>
+    Software agents continuously observe actual system state and attempt to apply the desired
+    state. Drift — any divergence between desired and actual state — is detected and corrected
+    automatically.
+  </p>
+
+  <p>
+    ArgoCD runs a reconciliation loop every 3 minutes by default, and can also be triggered
+    instantly via webhook. If someone manually applies a resource change with <code>kubectl</code>,
+    ArgoCD will detect the drift and revert it at the next reconciliation cycle. This makes
+    manual configuration changes impossible to maintain accidentally.
+  </p>
+
+  <h2>Why GitOps for platform engineering?</h2>
+
+  <p>
+    Platform teams manage infrastructure for other teams. This creates a tension: changes need
+    to be fast (developers are waiting), safe (production is critical), and auditable (compliance
+    requires traceability).
+  </p>
+
+  <p>GitOps addresses each of these:</p>
+
+  <ul>
+    <li>
+      <strong>Speed via automation:</strong> the reconciler applies approved changes within seconds,
+      no manual deployment steps required.
+    </li>
+    <li>
+      <strong>Safety via pull requests:</strong> all changes go through code review before being
+      applied. The Git history is the deployment log.
+    </li>
+    <li>
+      <strong>Auditability by design:</strong> every state transition is a commit. Compliance
+      questions ("what was running on 15 March?") are answered with <code>git log</code>.
+    </li>
+  </ul>
+
+  <h2>The role of ArgoCD in Portefaix</h2>
+
+  <p>
+    ArgoCD is not the only GitOps tool available (FluxCD is a popular alternative), but Portefaix
+    chose ArgoCD because of its rich UI, ApplicationSet controller for multi-cluster management,
+    and its support for Helm and Kustomize natively.
+  </p>
+
+  <p>
+    FluxCD was supported in Portefaix v1 but has been deprecated since v2.0.0. Teams migrating
+    from FluxCD to ArgoCD will find the conceptual model is identical — only the tooling differs.
+  </p>
+
+  <h2>GitOps and infrastructure (Terraform)</h2>
+
+  <p>
+    Kubernetes GitOps (ArgoCD managing in-cluster resources) is distinct from infrastructure
+    GitOps (Terraform managing cloud resources). Portefaix uses both:
+  </p>
+
+  <ul>
+    <li>
+      <strong>Infrastructure layer</strong> (<code>portefaix-infrastructure</code>): Terraform
+      manages cloud resources — clusters, networking, IAM. Changes are applied via CI/CD pipelines
+      (GitHub Actions or Spacelift) triggered by merges to the main branch.
+    </li>
+    <li>
+      <strong>Kubernetes layer</strong> (<code>portefaix-kubernetes</code>): ArgoCD manages
+      everything inside the cluster — Helm releases, Kyverno policies, Custom Resources.
+    </li>
+  </ul>
+
+  <p>
+    The two layers are intentionally separate. Infrastructure changes are infrequent and require
+    explicit pipeline approval. Kubernetes configuration changes are continuous and managed
+    entirely by ArgoCD.
+  </p>
+
+  <h2>Further reading</h2>
+
+  <ul>
+    <li><a href="https://opengitops.dev/" target="_blank" rel="noopener">OpenGitOps specification</a></li>
+    <li><a href="https://argo-cd.readthedocs.io/" target="_blank" rel="noopener">ArgoCD documentation</a></li>
+    <li><a href="/docs/explanation/platform-architecture/">Platform Architecture</a> — how GitOps fits into the broader Portefaix design</li>
+    <li><a href="/docs/how-to/bootstrap-argocd/">Bootstrap ArgoCD</a> — install and configure ArgoCD in your cluster</li>
+  </ul>
+</DocsLayout>

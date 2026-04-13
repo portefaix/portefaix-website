@@ -1,0 +1,141 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on DigitalOcean" description="How to deploy Portefaix on DigitalOcean with DOKS and Spaces-backed Terraform state.">
+  <p class="doc-eyebrow">// how-to guides · digitalocean</p>
+
+  <h1>Deploy Portefaix on DigitalOcean</h1>
+
+  <p>
+    This guide shows you how to deploy a Portefaix platform on DigitalOcean using DigitalOcean
+    Kubernetes (DOKS), Spaces (S3-compatible object storage) for Terraform state, and the
+    DigitalOcean CLI for cluster management.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running DOKS cluster with Portefaix stacks continuously reconciled
+      by ArgoCD.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>DigitalOcean account with a personal access token and a Spaces access key pair</li>
+    <li><code>doctl</code> CLI installed and authenticated (<code>doctl auth init</code>)</li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
+  </ul>
+
+  <h2>1. Configure your environment</h2>
+
+  <p>
+    Add DigitalOcean credentials to your Portefaix config file at
+    <code>$HOME/.config/portefaix/portefaix.sh</code>:
+  </p>
+
+  <pre><code>function setup_digitalocean() &#123;
+    export DIGITALOCEAN_TOKEN="dop_v1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    # Spaces credentials (from DigitalOcean → API → Spaces Keys)
+    export SPACES_ENDPOINT_URL="fra1.digitaloceanspaces.com"
+    export SPACES_ACCESS_KEY_ID="DOxxxxxxxxxxxxxxxxxx"
+    export SPACES_SECRET_ACCESS_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    # Terraform S3 backend uses AWS env vars for Spaces
+    export AWS_ACCESS_KEY_ID="$SPACES_ACCESS_KEY_ID"
+    export AWS_SECRET_ACCESS_KEY="$SPACES_SECRET_ACCESS_KEY"
+    export AWS_DEFAULT_REGION="eu-west-3"
+    export AWS_REGION="eu-west-3"
+&#125;</code></pre>
+
+  <pre><code>. ./portefaix.sh digitalocean
+
+export DO_REGION="fra1"    # fra1 | nyc1 | lon1 | ams3 | sgp1
+export PORTEFAIX_ENV="dev"</code></pre>
+
+  <h2>2. Create Terraform remote state storage</h2>
+
+  <p>
+    DigitalOcean Spaces is S3-compatible. Create a Space to hold Terraform state files:
+  </p>
+
+  <pre><code># Create the Space (globally unique name required)
+doctl spaces create portefaix-tfstate --region $DO_REGION
+
+# Enable versioning via the Spaces API (S3-compatible)
+aws s3api put-bucket-versioning \
+  --bucket portefaix-tfstate \
+  --versioning-configuration Status=Enabled \
+  --endpoint-url "https://$DO_REGION.digitaloceanspaces.com"</code></pre>
+
+  <h2>3. Provision the DOKS cluster with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/digitalocean/doks
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>region          = "fra1"
+cluster_name    = "portefaix-dev"
+k8s_version     = "1.31"
+node_size       = "s-2vcpu-4gb"
+node_count      = 3</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="bucket=portefaix-tfstate" \
+  -backend-config="key=doks/$PORTEFAIX_ENV.tfstate" \
+  -backend-config="region=$DO_REGION" \
+  -backend-config="endpoint=https://$DO_REGION.digitaloceanspaces.com"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>4. Fetch cluster credentials</h2>
+
+  <pre><code>export CLUSTER_ID="$(terraform output -raw cluster_id)"
+
+doctl kubernetes cluster kubeconfig save "$CLUSTER_ID"
+
+kubectl get nodes
+NAME                     STATUS   ROLES    AGE   VERSION
+portefaix-dev-pool-xxxx  Ready    &lt;none&gt;   5m    v1.31.1</code></pre>
+
+  <h2>5. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-digitalocean.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-digitalocean-$PORTEFAIX_ENV.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on DigitalOcean</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>DigitalOcean service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>Spaces for long-term storage</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>DigitalOcean DNS</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>DigitalOcean DNS for DNS-01 challenges</td></tr>
+      <tr><td>Load balancing</td><td>DigitalOcean Cloud Controller</td><td>DigitalOcean Load Balancer</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Tip:</strong> use the DigitalOcean Container Registry (DOCR) as a private registry
+      for your platform images. DOKS clusters can pull from DOCR without additional credentials
+      when the registry is integrated with the cluster:
+      <code>doctl kubernetes cluster registry add CLUSTER_ID</code>
+    </p>
+  </div>
+</DocsLayout>

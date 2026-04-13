@@ -1,0 +1,194 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Your First Cluster" description="A step-by-step tutorial to bootstrap a complete Portefaix platform from scratch.">
+  <p class="doc-eyebrow">// tutorials · learning by doing</p>
+
+  <h1>Your First Portefaix Cluster</h1>
+
+  <p>
+    This tutorial walks you through bootstrapping a fully operational Portefaix platform on a cloud
+    provider of your choice. By the end, you will have a running Kubernetes cluster with GitOps,
+    observability, and policy enforcement configured — and you will understand how each piece fits
+    together.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>What you will learn:</strong> how to provision cloud infrastructure with Terraform,
+      connect ArgoCD to a Git repository, deploy platform stacks, and verify the installation.
+      This tutorial is designed for first-time Portefaix users.
+    </p>
+  </div>
+
+  <h2>Before you begin</h2>
+
+  <p>You need the following tools installed and configured on your workstation:</p>
+
+  <ul>
+    <li><strong>Terraform</strong> ≥ 1.5 — infrastructure provisioning</li>
+    <li><strong>kubectl</strong> — Kubernetes CLI</li>
+    <li><strong>Helm</strong> ≥ 3.12 — chart management</li>
+    <li><strong>ArgoCD CLI</strong> (<code>argocd</code>) — GitOps operations</li>
+    <li><strong>Git</strong> — version control</li>
+    <li>Cloud provider CLI (<code>gcloud</code>, <code>aws</code>, or <code>az</code>)</li>
+  </ul>
+
+  <p>You also need:</p>
+  <ul>
+    <li>A cloud provider account with permissions to create Kubernetes clusters and IAM resources</li>
+    <li>A GitHub (or GitLab) account for your GitOps repository</li>
+  </ul>
+
+  <h2>Step 1 — Fork the Portefaix repositories</h2>
+
+  <p>
+    Portefaix uses two main repositories. Fork both to your GitHub account — ArgoCD will pull
+    manifests from your forks, allowing you to customise settings without modifying upstream.
+  </p>
+
+  <pre><code># Fork these repositories on GitHub, then clone them locally
+git clone https://github.com/YOUR_ORG/portefaix-kubernetes
+git clone https://github.com/YOUR_ORG/portefaix-infrastructure</code></pre>
+
+  <p>Set your organisation name as an environment variable for the commands below:</p>
+
+  <pre><code>export PORTEFAIX_ORG="your-github-org"
+export PORTEFAIX_ENV="staging"           # or "production"
+export CLOUD="gcp"                       # gcp | aws | azure | scaleway</code></pre>
+
+  <h2>Step 2 — Provision cloud infrastructure</h2>
+
+  <p>
+    Navigate to the Terraform module for your chosen cloud provider. Each module creates a managed
+    Kubernetes cluster, networking, IAM roles for workload identity, and storage buckets for
+    Terraform state.
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/terraform/$CLOUD/cluster
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your project ID, region, and cluster settings</code></pre>
+
+  <pre><code>terraform init
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <p>
+    After <code>apply</code> completes, Terraform outputs your cluster credentials. Fetch them:
+  </p>
+
+  <pre><code># GCP
+gcloud container clusters get-credentials portefaix-$PORTEFAIX_ENV --region europe-west1
+
+# AWS
+aws eks update-kubeconfig --name portefaix-$PORTEFAIX_ENV --region eu-west-1
+
+# Azure
+az aks get-credentials --resource-group portefaix --name portefaix-$PORTEFAIX_ENV</code></pre>
+
+  <p>Verify the cluster is reachable:</p>
+
+  <pre><code>kubectl get nodes</code></pre>
+
+  <h2>Step 3 — Install ArgoCD</h2>
+
+  <p>
+    ArgoCD is the GitOps engine that continuously reconciles your cluster state with the manifests
+    in Git. Install it into a dedicated namespace:
+  </p>
+
+  <pre><code>kubectl create namespace argocd
+
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd \
+  --version 7.x.x \
+  --values portefaix-kubernetes/gitops/argocd/values-$CLOUD.yaml \
+  --wait</code></pre>
+
+  <p>
+    Retrieve the initial admin password and log in:
+  </p>
+
+  <pre><code>argocd admin initial-password -n argocd
+
+argocd login localhost:8080 \
+  --username admin \
+  --password "$(argocd admin initial-password -n argocd | head -1)" \
+  --insecure</code></pre>
+
+  <h2>Step 4 — Bootstrap the App of Apps</h2>
+
+  <p>
+    Portefaix uses the <em>app-of-apps</em> pattern: a single root ArgoCD Application manages
+    all other Applications. Apply the bootstrap manifest to register it:
+  </p>
+
+  <pre><code>kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-$CLOUD-$PORTEFAIX_ENV.yaml</code></pre>
+
+  <p>
+    ArgoCD will now pull manifests from your forked repository and begin reconciling. Watch the
+    sync progress:
+  </p>
+
+  <pre><code>argocd app list
+argocd app sync portefaix-bootstrap
+argocd app wait portefaix-bootstrap --health</code></pre>
+
+  <h2>Step 5 — Verify the installation</h2>
+
+  <p>
+    Once all Applications are <code>Healthy</code> and <code>Synced</code>, verify the core
+    platform components are running:
+  </p>
+
+  <pre><code># Observability stack
+kubectl get pods -n monitoring
+
+# Policy engine
+kubectl get pods -n kyverno
+
+# Certificate management
+kubectl get pods -n cert-manager
+
+# Ingress
+kubectl get pods -n ingress-nginx</code></pre>
+
+  <p>
+    Open the ArgoCD UI to see all managed applications:
+  </p>
+
+  <pre><code>kubectl port-forward svc/argocd-server -n argocd 8080:443
+# Visit https://localhost:8080</code></pre>
+
+  <h2>What you built</h2>
+
+  <p>You now have a Portefaix platform with:</p>
+
+  <ul>
+    <li>A managed Kubernetes cluster provisioned with Terraform</li>
+    <li>ArgoCD continuously reconciling cluster state from Git</li>
+    <li>Kyverno enforcing platform policies</li>
+    <li>Prometheus + Grafana for metrics and dashboards</li>
+    <li>Cert-manager issuing TLS certificates automatically</li>
+    <li>External Secrets Operator syncing secrets from your cloud vault</li>
+  </ul>
+
+  <h2>Next steps</h2>
+
+  <p>
+    Now that you have a running cluster, explore the rest of the documentation:
+  </p>
+
+  <ul>
+    <li><a href="/docs/how-to/deploy-gcp/">How-to: Deploy on GCP</a> — deeper dive into GCP-specific configuration</li>
+    <li><a href="/docs/reference/components/">Reference: Components</a> — full inventory of every platform component</li>
+    <li><a href="/docs/explanation/gitops-principles/">Explanation: GitOps Principles</a> — understand the model underpinning the platform</li>
+  </ul>
+</DocsLayout>

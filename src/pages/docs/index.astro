@@ -4,48 +4,92 @@
 
 import DocsLayout from "../../layouts/DocsLayout.astro";
 
-const sections = [
+const quadrants = [
   {
-    label: "Guides",
-    color: "#818cf8",
+    type: "Tutorials",
+    color: "#0284c7",
+    accent: "rgba(2,132,199,0.1)",
+    border: "rgba(2,132,199,0.25)",
+    eyebrow: "learning · practice",
+    desc: "Step-by-step lessons that take you from zero to a running platform. Follow along to build understanding through doing.",
     items: [
-      { title: "GitOps Principles", href: "/docs/guides/gitops/", desc: "Core OpenGitOps principles applied across the platform." },
-      { title: "ArgoCD", href: "/docs/guides/argocd/", desc: "Bootstrap stacks and deploy applications with ArgoCD." },
+      { title: "Your First Cluster", href: "/docs/tutorials/", desc: "Bootstrap a complete Portefaix platform from scratch on your chosen cloud." },
     ],
   },
   {
-    label: "Infrastructure",
-    color: "#34d399",
+    type: "How-to Guides",
+    color: "#7c3aed",
+    accent: "rgba(124,58,237,0.1)",
+    border: "rgba(124,58,237,0.25)",
+    eyebrow: "application · practice",
+    desc: "Goal-oriented recipes for specific tasks. Assumes you know the basics — these guides get you to a result efficiently.",
     items: [
-      { title: "GCP", href: "/docs/guides/gcp/", desc: "Deploy and manage Portefaix on Google Cloud Platform." },
-      { title: "AWS", href: "/docs/guides/aws/", desc: "Deploy and manage Portefaix on Amazon Web Services." },
-      { title: "Azure", href: "/docs/guides/azure/", desc: "Deploy and manage Portefaix on Microsoft Azure." },
-      { title: "Scaleway", href: "/docs/guides/scaleway/", desc: "Deploy and manage Portefaix on Scaleway with Kapsule managed Kubernetes." },
+      { title: "Deploy on GCP",      href: "/docs/how-to/deploy-gcp/",      desc: "Provision GKE + Workload Identity + Portefaix stacks." },
+      { title: "Deploy on AWS",      href: "/docs/how-to/deploy-aws/",      desc: "Provision EKS + Pod Identity + Portefaix stacks." },
+      { title: "Deploy on Azure",    href: "/docs/how-to/deploy-azure/",    desc: "Provision AKS + Workload Identity + Portefaix stacks." },
+      { title: "Deploy on Scaleway", href: "/docs/how-to/deploy-scaleway/", desc: "Provision Kapsule + Spacelift + Portefaix stacks." },
+      { title: "Bootstrap ArgoCD",   href: "/docs/how-to/bootstrap-argocd/","desc": "Install and configure ArgoCD as the GitOps engine." },
     ],
   },
   {
-    label: "Reference",
-    color: "#fb923c",
+    type: "Reference",
+    color: "#e11d48",
+    accent: "rgba(225,29,72,0.1)",
+    border: "rgba(225,29,72,0.25)",
+    eyebrow: "application · theory",
+    desc: "Technical descriptions of the machinery: APIs, components, policies, and chart catalogue. Consult when you need facts.",
     items: [
-      { title: "Components", href: "/docs/reference/components/", desc: "Full inventory of platform components and their roles." },
-      { title: "Helm Charts Hub", href: "/docs/reference/hub/", desc: "Curated Helm chart registry for Portefaix." },
-      { title: "Policies", href: "/docs/reference/policies/", desc: "Validating Admission Policy (VAP) + CEL policy catalogue with policy codes." },
+      { title: "Components",      href: "/docs/reference/components/", desc: "Complete inventory of every platform component and its role." },
+      { title: "Helm Charts Hub", href: "/docs/reference/hub/",        desc: "Curated Helm charts optimised for Portefaix." },
+      { title: "Policies",        href: "/docs/reference/policies/",   desc: "Kyverno + OPA/CEL policy catalogue with policy codes." },
+    ],
+  },
+  {
+    type: "Explanation",
+    color: "#d97706",
+    accent: "rgba(217,119,6,0.1)",
+    border: "rgba(217,119,6,0.25)",
+    eyebrow: "learning · theory",
+    desc: "Background, rationale, and architectural thinking. Read these to understand *why* Portefaix is designed the way it is.",
+    items: [
+      { title: "GitOps Principles",     href: "/docs/explanation/gitops-principles/",     desc: "The four OpenGitOps principles and how Portefaix applies them." },
+      { title: "Platform Architecture", href: "/docs/explanation/platform-architecture/", desc: "How the sub-projects fit together and the reasoning behind each layer." },
     ],
   },
 ];
 ---
 
 <DocsLayout title="Documentation">
-  <p class="doc-eyebrow">// docs</p>
+  <p class="doc-eyebrow">// docs · overview</p>
 
   <h1>Portefaix Documentation</h1>
 
   <p>
     Portefaix is a complete, open-source platform engineering toolkit for building production-grade
-    Kubernetes platforms on any cloud. These docs cover every layer of the stack — from bootstrapping
-    infrastructure with Terraform, to applying GitOps with ArgoCD, to enforcing policies
-    with Kyverno and OPA.
+    Kubernetes platforms on any cloud. These docs are organised following the
+    <strong>Diátaxis</strong> framework — four distinct documentation types, each serving a
+    different reader need.
   </p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;margin:2rem 0;">
+    {quadrants.map((q) => (
+      <div style={`background:${q.accent};border:1px solid ${q.border};border-radius:12px;padding:1.25rem 1.5rem;`}>
+        <p style={`font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:${q.color};margin-bottom:0.35rem;`}>{q.eyebrow}</p>
+        <h3 style={`font-size:1rem;font-weight:600;color:var(--t1);margin:0 0 0.5rem;`}>{q.type}</h3>
+        <p style="font-size:0.88rem;color:var(--t2);line-height:1.6;margin-bottom:1rem;">{q.desc}</p>
+        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.35rem;">
+          {q.items.map((item) => (
+            <li>
+              <a href={item.href} style={`font-size:0.85rem;color:${q.color};text-decoration:underline;text-underline-offset:2px;`}>
+                {item.title}
+              </a>
+              <span style="font-size:0.8rem;color:var(--t3);"> — {item.desc}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
 
   <h2>Platform Sub-projects</h2>
 
@@ -81,45 +125,10 @@ const sections = [
     </tbody>
   </table>
 
-  {sections.map((s) => (
-    <>
-      <h2>{s.label}</h2>
-      <ul>
-        {s.items.map((item) => (
-          <li>
-            <a href={item.href}>{item.title}</a> — {item.desc}
-          </li>
-        ))}
-      </ul>
-    </>
-  ))}
-
-  <h2>Design Principles</h2>
-
-  <p>
-    Portefaix is built on a set of core engineering principles that guide every decision across
-    all sub-projects:
-  </p>
-
-  <ul>
-    <li><strong>GitOps-first</strong> — infrastructure and application state is declared in Git and reconciled automatically.</li>
-    <li><strong>Policy-as-code</strong> — security and compliance requirements are encoded as machine-checkable policies.</li>
-    <li><strong>Cloud-agnostic</strong> — the same abstractions work across AWS, GCP, Azure, and on-premises environments.</li>
-    <li><strong>Observable by default</strong> — metrics, logs, and traces are built in, not bolted on.</li>
-    <li><strong>Open standards</strong> — built on CNCF projects, OpenTelemetry, and open specifications.</li>
-  </ul>
-
-  <div class="callout callout-info">
-    <p>
-      <strong>Getting started?</strong> Begin with the <a href="/docs/guides/gitops/">GitOps Principles</a> guide
-      to understand the foundational model, then pick your cloud provider under Infrastructure.
-    </p>
-  </div>
-
   <div class="callout callout-warn">
     <p>
-      <strong>FluxCD is deprecated</strong> as of Portefaix v2.0.0. ArgoCD is the recommended GitOps engine going forward.
-      The FluxCD guide is preserved for reference at <a href="/docs/guides/fluxcd/">docs/guides/fluxcd</a>.
+      <strong>FluxCD is deprecated</strong> as of Portefaix v2.0.0. ArgoCD is the recommended GitOps engine.
+      The FluxCD guide is preserved at <a href="/docs/guides/fluxcd/">docs/guides/fluxcd</a>.
     </p>
   </div>
 </DocsLayout>

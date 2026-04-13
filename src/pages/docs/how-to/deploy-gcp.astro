@@ -1,0 +1,348 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on GCP" description="How to deploy Portefaix on Google Cloud Platform with GKE and Workload Identity.">
+  <p class="doc-eyebrow">// how-to guides · gcp</p>
+
+  <h1>Deploy Portefaix on GCP</h1>
+
+  <p>
+    This guide shows you how to deploy a production-ready Portefaix platform on Google Cloud
+    Platform using a GCP Organization with dedicated project hierarchy, GKE with Workload Identity
+    Federation for keyless authentication, and GitHub Actions for infrastructure automation.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running GKE cluster in a dedicated GCP project, with Portefaix
+      stacks continuously reconciled by ArgoCD and GCP service accounts bound to Kubernetes
+      workloads via Workload Identity — no service account keys stored anywhere in the cluster.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>A GCP Organization created via <a href="https://cloud.google.com/resource-manager/docs/creating-managing-organization" target="_blank" rel="noopener">Google Workspace or Cloud Identity</a></li>
+    <li><code>gcloud</code> CLI v450+ installed and authenticated (<code>gcloud auth login</code>)</li>
+    <li>Terraform ≥ 1.5 and kubectl installed locally</li>
+    <li>Organization Administrator or Owner role on the GCP Organization</li>
+    <li>A GitHub organisation for your GitOps repositories</li>
+  </ul>
+
+  <h2>1. Authenticate and identify your organization</h2>
+
+  <p>Log in and confirm your organization ID — you will need it for all subsequent steps:</p>
+
+  <pre><code>gcloud auth login
+gcloud auth application-default login
+
+# Find your organization ID
+gcloud organizations list</code></pre>
+
+  <p>Set your environment variables for the session:</p>
+
+  <pre><code>export GCP_ORG_ID="123456789012"          # from organizations list
+export GCP_ORG_NAME="portefaix"            # short slug for resource names
+export GCP_USER="admin@portefaix.xyz"      # your GCP identity
+export GCP_BILLING_ACCOUNT="XXXXXX-XXXXXX-XXXXXX"
+export GCP_REGION="europe-west1"
+export PORTEFAIX_ENV="staging"</code></pre>
+
+  <h2>2. Bootstrap the GCP organization</h2>
+
+  <p>
+    Portefaix uses a dedicated <em>bootstrap project</em> to hold the Terraform service account
+    and state bucket. This project is separate from workload projects and gives you a clean
+    separation of concerns for infrastructure management.
+  </p>
+
+  <h3>Create the bootstrap project</h3>
+
+  <pre><code># Create the bootstrap project under your organization
+gcloud projects create $GCP_ORG_NAME-bootstrap \
+  --organization=$GCP_ORG_ID \
+  --name="Portefaix Bootstrap"
+
+# Link billing
+gcloud billing projects link $GCP_ORG_NAME-bootstrap \
+  --billing-account=$GCP_BILLING_ACCOUNT
+
+export GCP_BOOTSTRAP_PROJECT="$GCP_ORG_NAME-bootstrap"</code></pre>
+
+  <h3>Enable required APIs on the bootstrap project</h3>
+
+  <pre><code>gcloud services enable \
+  cloudresourcemanager.googleapis.com \
+  cloudbilling.googleapis.com \
+  iam.googleapis.com \
+  serviceusage.googleapis.com \
+  storage.googleapis.com \
+  --project=$GCP_BOOTSTRAP_PROJECT</code></pre>
+
+  <h3>Create the Terraform service account</h3>
+
+  <pre><code>gcloud iam service-accounts create terraform \
+  --display-name="Portefaix Terraform" \
+  --project=$GCP_BOOTSTRAP_PROJECT
+
+export TF_SA="terraform@$GCP_BOOTSTRAP_PROJECT.iam.gserviceaccount.com"
+
+# Grant organization-level permissions needed to create projects and IAM bindings
+gcloud organizations add-iam-policy-binding $GCP_ORG_ID \
+  --member="serviceAccount:$TF_SA" \
+  --role="roles/resourcemanager.organizationAdmin"
+
+gcloud organizations add-iam-policy-binding $GCP_ORG_ID \
+  --member="serviceAccount:$TF_SA" \
+  --role="roles/billing.user"</code></pre>
+
+  <h3>Create the GCS bucket for Terraform state</h3>
+
+  <pre><code>gcloud storage buckets create gs://$GCP_ORG_NAME-tfstate \
+  --project=$GCP_BOOTSTRAP_PROJECT \
+  --location=$GCP_REGION \
+  --uniform-bucket-level-access \
+  --public-access-prevention
+
+# Enable versioning for state history
+gcloud storage buckets update gs://$GCP_ORG_NAME-tfstate \
+  --versioning</code></pre>
+
+  <h2>3. Bootstrap the organization with Terraform</h2>
+
+  <p>
+    The root Terraform module creates the project hierarchy (folder structure, workload projects,
+    shared networking) and provisions the Workload Identity Pool used by GitHub Actions:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/terraform/gcp/root
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <p>Edit <code>terraform.tfvars</code>:</p>
+
+  <pre><code>org_id           = "123456789012"
+org_name         = "portefaix"
+billing_account  = "XXXXXX-XXXXXX-XXXXXX"
+region           = "europe-west1"
+tf_sa_email      = "terraform@portefaix-bootstrap.iam.gserviceaccount.com"</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="bucket=$GCP_ORG_NAME-tfstate" \
+  -backend-config="prefix=root"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Groups and billing:</strong> after running the root module, visit the
+      <a href="https://console.cloud.google.com/cloud-setup/organization" target="_blank" rel="noopener">GCP Organization Setup console</a>
+      to create the required IAM groups and verify the billing account assignment.
+    </p>
+  </div>
+
+  <h2>4. Provision the GKE cluster</h2>
+
+  <p>
+    Each environment (staging, production) has its own GCP project. The GKE Terraform module
+    creates the cluster, VPC, node pools, and all Workload Identity bindings:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/terraform/gcp/gke
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <p>Key variables in <code>terraform.tfvars</code>:</p>
+
+  <pre><code>project_id     = "portefaix-staging"
+region         = "europe-west1"
+cluster_name   = "portefaix-staging"
+# Use Autopilot for a fully managed node pool experience
+autopilot      = true</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="bucket=$GCP_ORG_NAME-tfstate" \
+  -backend-config="prefix=gke/$PORTEFAIX_ENV"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>5. Configure Workload Identity</h2>
+
+  <p>
+    Workload Identity Federation maps Kubernetes service accounts to GCP service accounts,
+    allowing pods to call Google Cloud APIs using short-lived tokens — no service account key
+    files required. The Terraform module creates all bindings automatically. Verify them:
+  </p>
+
+  <pre><code># Check the Workload Identity Pool on the project
+gcloud iam workload-identity-pools list \
+  --location=global \
+  --project=portefaix-staging
+
+# Verify the annotation on a Kubernetes service account (after cluster access below)
+kubectl get serviceaccount external-secrets -n external-secrets \
+  -o jsonpath='.metadata.annotations'</code></pre>
+
+  <p>Expected annotation on each platform service account:</p>
+
+  <pre><code>iam.gke.io/gcp-service-account: external-secrets@portefaix-staging.iam.gserviceaccount.com</code></pre>
+
+  <h2>6. Fetch cluster credentials</h2>
+
+  <p>Load Portefaix credentials and update your local kubeconfig:</p>
+
+  <pre><code>. ./portefaix.sh gcp
+
+gcloud container clusters get-credentials \
+  portefaix-$PORTEFAIX_ENV \
+  --region $GCP_REGION \
+  --project portefaix-$PORTEFAIX_ENV</code></pre>
+
+  <p>Verify nodes are ready:</p>
+
+  <pre><code>kubectl get nodes
+NAME                                                STATUS   ROLES    AGE     VERSION
+gke-portefaix-staging-core-5d5d62be-tf15            Ready    &lt;none&gt;   7m      v1.31.1-gke.1000000</code></pre>
+
+  <h2>7. Configure Cloud IAP (optional)</h2>
+
+  <p>
+    Cloud Identity-Aware Proxy (IAP) secures access to the ArgoCD UI and Grafana without
+    exposing them publicly. To enable IAP:
+  </p>
+
+  <ol>
+    <li>Configure the <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener">OAuth consent screen</a> with your domain and support email</li>
+    <li>Create an <strong>OAuth 2.0 Client ID</strong> of type <em>Web application</em> in the <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credentials console</a></li>
+    <li>Store the client ID and secret in Secret Manager — the External Secrets Operator will sync them to your cluster automatically</li>
+  </ol>
+
+  <pre><code>gcloud secrets create iap-oauth-client-id \
+  --data-file=- \
+  --project=portefaix-$PORTEFAIX_ENV &lt;&lt;&lt; "YOUR_CLIENT_ID"
+
+gcloud secrets create iap-oauth-client-secret \
+  --data-file=- \
+  --project=portefaix-$PORTEFAIX_ENV &lt;&lt;&lt; "YOUR_CLIENT_SECRET"</code></pre>
+
+  <h2>8. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <p>Install ArgoCD with the GCP-specific values file, then apply the app-of-apps bootstrap:</p>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-gcp.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-gcp-$PORTEFAIX_ENV.yaml</code></pre>
+
+  <p>Monitor the initial sync:</p>
+
+  <pre><code>argocd app list
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>9. Automate with GitHub Actions and Workload Identity Federation</h2>
+
+  <p>
+    The Portefaix infrastructure repository uses GitHub Actions with
+    <a href="https://cloud.google.com/blog/products/identity-security/enabling-keyless-authentication-from-github-actions" target="_blank" rel="noopener">Workload Identity Federation</a>
+    for all Terraform operations — no GCP service account keys stored as GitHub secrets.
+  </p>
+
+  <p>
+    The root Terraform module creates the Workload Identity Pool and Provider for GitHub Actions.
+    Verify the configuration:
+  </p>
+
+  <pre><code># List Workload Identity Pools
+gcloud iam workload-identity-pools list \
+  --location=global \
+  --project=$GCP_BOOTSTRAP_PROJECT
+
+# List providers in the pool
+gcloud iam workload-identity-pools providers list \
+  --workload-identity-pool=github-actions \
+  --location=global \
+  --project=$GCP_BOOTSTRAP_PROJECT</code></pre>
+
+  <p>
+    Once configured, GitHub Actions workflows authenticate with:
+  </p>
+
+  <pre><code># In .github/workflows/terraform-gcp.yml
+- uses: google-github-actions/auth@v2
+  with:
+    workload_identity_provider: "projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/providers/github"
+    service_account: "terraform@$GCP_BOOTSTRAP_PROJECT.iam.gserviceaccount.com"</code></pre>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>No key rotation needed:</strong> Workload Identity Federation tokens are short-lived
+      (1 hour) and tied to the specific repository and branch ref. A compromised token cannot be
+      reused outside its scope.
+    </p>
+  </div>
+
+  <h2>Stacks available on GCP</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>GCP service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>GCS buckets for Thanos, Loki, Tempo long-term storage</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>Secret Manager</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>Cloud DNS</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>Cloud DNS for DNS-01 challenges</td></tr>
+      <tr><td>Backup</td><td>Velero</td><td>GCS bucket for backup storage</td></tr>
+      <tr><td>Encryption keys</td><td>SOPS / KMS provider</td><td>Cloud KMS</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+      <tr><td>Access proxy</td><td>OAuth2 Proxy</td><td>Cloud IAP</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Troubleshooting</h2>
+
+  <h3>Workload Identity not working</h3>
+
+  <p>
+    Verify the cluster was created with the Workload Identity feature enabled:
+  </p>
+
+  <pre><code>gcloud container clusters describe portefaix-$PORTEFAIX_ENV \
+  --region $GCP_REGION \
+  --project portefaix-$PORTEFAIX_ENV \
+  --format="value(workloadIdentityConfig.workloadPool)"</code></pre>
+
+  <p>Expected output: <code>portefaix-staging.svc.id.goog</code></p>
+
+  <p>
+    Verify the IAM binding between the GCP service account and the Kubernetes service account:
+  </p>
+
+  <pre><code>gcloud iam service-accounts get-iam-policy \
+  external-secrets@portefaix-staging.iam.gserviceaccount.com \
+  --project=portefaix-staging</code></pre>
+
+  <p>
+    The policy should include a binding for
+    <code>serviceAccount:portefaix-staging.svc.id.goog[external-secrets/external-secrets]</code>
+    with role <code>roles/iam.workloadIdentityUser</code>.
+  </p>
+
+  <h3>gcloud credential errors after sourcing portefaix.sh</h3>
+
+  <pre><code># Re-authenticate application default credentials
+gcloud auth application-default login
+
+# Verify the active account matches your GCP_USER
+gcloud auth list</code></pre>
+</DocsLayout>

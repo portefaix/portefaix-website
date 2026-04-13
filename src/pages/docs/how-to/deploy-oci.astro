@@ -1,0 +1,174 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on Oracle Cloud" description="How to deploy Portefaix on Oracle Cloud Infrastructure with OKE and Object Storage.">
+  <p class="doc-eyebrow">// how-to guides · oracle cloud</p>
+
+  <h1>Deploy Portefaix on Oracle Cloud Infrastructure</h1>
+
+  <p>
+    This guide shows you how to deploy a Portefaix platform on Oracle Cloud Infrastructure (OCI)
+    using Oracle Container Engine for Kubernetes (OKE), OCI Object Storage for Terraform state,
+    and a dedicated compartment for resource isolation.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running OKE cluster in a dedicated OCI compartment, with Portefaix
+      stacks continuously reconciled by ArgoCD.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>OCI account with <strong>Administrator</strong> policy or equivalent IAM permissions</li>
+    <li>OCI CLI configured with API signing keys — see the <a href="https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm" target="_blank" rel="noopener">OCI API key setup guide</a></li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
+  </ul>
+
+  <h2>1. Configure your environment</h2>
+
+  <pre><code>. ./portefaix.sh oci
+
+export OCI_TENANCY_ID="ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxx"
+export OCI_USER_ID="ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxx"
+export OCI_REGION="eu-frankfurt-1"
+export PORTEFAIX_ENV="staging"</code></pre>
+
+  <p>Verify CLI access:</p>
+
+  <pre><code>oci iam region list --output table</code></pre>
+
+  <h2>2. Create a dedicated compartment</h2>
+
+  <p>
+    OCI uses compartments to isolate resources. Create a dedicated compartment for Portefaix
+    to keep billing and IAM policies clean:
+  </p>
+
+  <pre><code>oci iam compartment create \
+  --compartment-id "$OCI_TENANCY_ID" \
+  --name "portefaix-$PORTEFAIX_ENV" \
+  --description "Portefaix platform - $PORTEFAIX_ENV environment"
+
+export OCI_COMPARTMENT_ID="$(oci iam compartment list \
+  --compartment-id "$OCI_TENANCY_ID" \
+  --name "portefaix-$PORTEFAIX_ENV" \
+  --query 'data[0].id' --raw-output)"</code></pre>
+
+  <h2>3. Create Terraform remote state storage</h2>
+
+  <p>
+    OCI Object Storage is S3-compatible when accessed with customer secret keys. Create a
+    bucket for Terraform state, then generate S3-compatible credentials:
+  </p>
+
+  <pre><code>oci os bucket create \
+  --compartment-id "$OCI_COMPARTMENT_ID" \
+  --name portefaix-tfstate \
+  --versioning Enabled
+
+# Generate customer secret key for S3-compatible API access
+oci iam customer-secret-key create \
+  --user-id "$OCI_USER_ID" \
+  --display-name "portefaix-terraform"
+
+# Note the id and key from the output
+export AWS_ACCESS_KEY_ID="&lt;id from output&gt;"
+export AWS_SECRET_ACCESS_KEY="&lt;key from output&gt;"</code></pre>
+
+  <h2>4. Bootstrap the OCI organization with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/oci/root
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>tenancy_ocid     = "ocid1.tenancy.oc1..xxx"
+user_ocid        = "ocid1.user.oc1..xxx"
+region           = "eu-frankfurt-1"
+compartment_id   = "ocid1.compartment.oc1..xxx"</code></pre>
+
+  <pre><code>OCI_NAMESPACE="$(oci os ns get --query 'data' --raw-output)"
+
+terraform init \
+  -backend-config="bucket=portefaix-tfstate" \
+  -backend-config="key=root/main.tfstate" \
+  -backend-config="region=$OCI_REGION" \
+  -backend-config="endpoint=https://$OCI_NAMESPACE.compat.objectstorage.$OCI_REGION.oraclecloud.com"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>5. Provision the OKE cluster with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/oci/oke
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>tenancy_ocid     = "ocid1.tenancy.oc1..xxx"
+region           = "eu-frankfurt-1"
+compartment_id   = "ocid1.compartment.oc1..xxx"
+cluster_name     = "portefaix-staging"
+k8s_version      = "v1.31.1"
+node_shape       = "VM.Standard.E4.Flex"
+node_count       = 3</code></pre>
+
+  <pre><code>terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>6. Fetch cluster credentials</h2>
+
+  <pre><code>export CLUSTER_ID="$(terraform output -raw cluster_id)"
+
+oci ce cluster create-kubeconfig \
+  --cluster-id "$CLUSTER_ID" \
+  --file "$HOME/.kube/portefaix-oci" \
+  --region "$OCI_REGION" \
+  --token-version 2.0.0 \
+  --kube-endpoint PUBLIC_ENDPOINT
+
+export KUBECONFIG="$HOME/.kube/portefaix-oci"
+
+kubectl get nodes</code></pre>
+
+  <h2>7. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-oci.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-oci-$PORTEFAIX_ENV.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on OCI</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>OCI service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>Object Storage for long-term storage</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>OCI Vault</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>OCI DNS</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>OCI DNS for DNS-01 challenges</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Cost optimisation:</strong> OCI offers generous Always Free resources including
+      two AMD compute instances and 200 GB of Object Storage. Use
+      <code>node_shape = "VM.Standard.E2.1.Micro"</code> for development clusters to stay
+      within the free tier.
+    </p>
+  </div>
+</DocsLayout>

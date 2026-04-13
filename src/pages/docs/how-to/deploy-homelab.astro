@@ -1,0 +1,268 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on Homelab" description="How to deploy Portefaix on a Raspberry Pi homelab cluster using k3s, Cilium, and Cloudflare R2.">
+  <p class="doc-eyebrow">// how-to guides · homelab</p>
+
+  <h1>Deploy Portefaix on Homelab</h1>
+
+  <p>
+    This guide shows you how to deploy a Portefaix platform on a Raspberry Pi cluster using k3s
+    as the Kubernetes distribution, Cilium as the CNI, Tailscale for secure networking, and
+    Cloudflare R2 for Terraform state storage.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a multi-node k3s cluster on Raspberry Pi hardware, with Cilium
+      providing cluster networking, Tailscale providing a secure overlay network, and Portefaix
+      stacks reconciled by ArgoCD.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>2+ Raspberry Pi 4 or 5 boards (8 GB RAM recommended for the control plane)</li>
+    <li>SD cards or USB SSDs (32 GB+ per node)</li>
+    <li>Ansible installed on your workstation</li>
+    <li><code>k3sup</code> CLI installed (<code>curl -sLS https://get.k3sup.dev | sh</code>)</li>
+    <li>Tailscale account and auth key</li>
+    <li>Cloudflare account with R2 enabled and an API token</li>
+  </ul>
+
+  <h2>1. Prepare the SD cards</h2>
+
+  <p>
+    Flash Ubuntu 24.04 LTS (64-bit) onto each SD card. The Portefaix homelab script automates
+    hostname injection and SSH key setup:
+  </p>
+
+  <pre><code># Wipe and flash each card (replace /dev/mmcblk0 with your device)
+sudo dd if=/dev/zero of=/dev/mmcblk0 conv=noerror status=progress
+
+sudo ./hack/scripts/sdcard.sh &lt;hostname&gt; /dev/mmcblk0</code></pre>
+
+  <p>Enable SSH and set hostnames before first boot:</p>
+
+  <pre><code>make -f hack/build/k3s.mk sdcard-mount ENV=homelab
+sudo touch /mnt/portefaix/boot/ssh
+echo portefaix-1 | sudo tee /mnt/portefaix/root/etc/hostname
+make -f hack/build/k3s.mk sdcard-unmount ENV=homelab</code></pre>
+
+  <p>Boot each Pi and copy your SSH key:</p>
+
+  <pre><code>ssh-copy-id -i ~/.ssh/id_ed25519.pub pi@192.168.0.61
+ssh-copy-id -i ~/.ssh/id_ed25519.pub pi@192.168.0.208
+# ... repeat for each node</code></pre>
+
+  <h2>2. Configure nodes with Ansible</h2>
+
+  <p>
+    The Ansible playbook installs base packages, disables swap, configures kernel parameters
+    for Kubernetes, and sets up container runtime prerequisites on all nodes:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/ansible/k3s/machines
+
+# Install Ansible collections
+ansible-galaxy install -r requirements.yml
+
+# Run the machine preparation playbook
+ansible-playbook -i inventories/homelab/hosts.ini site.yml \
+  --diff \
+  -e "env=homelab"</code></pre>
+
+  <h2>3. Create the k3s cluster with k3sup</h2>
+
+  <p>
+    k3sup uses SSH to install k3s on each node. Create the control plane first, then join
+    the worker nodes. Cilium replaces the default Flannel CNI — pass <code>--flannel-backend=none</code>
+    to disable it:
+  </p>
+
+  <pre><code>export SERVER_IP="192.168.0.61"    # control plane IP
+export EXTERNAL_IP="100.79.205.64" # Tailscale IP of control plane
+
+# Bootstrap the control plane
+k3sup install \
+  --ip "$SERVER_IP" \
+  --user pi \
+  --k3s-extra-args "--disable traefik --disable servicelb --flannel-backend=none --disable-network-policy" \
+  --merge --local-path ~/.kube/config \
+  --context portefaix-homelab</code></pre>
+
+  <p>Join each worker node:</p>
+
+  <pre><code># Worker node 1
+k3sup join \
+  --ip 192.168.0.208 \
+  --server-ip "$SERVER_IP" \
+  --user pi
+
+# Worker node 2
+k3sup join \
+  --ip 192.168.0.116 \
+  --server-ip "$SERVER_IP" \
+  --user pi</code></pre>
+
+  <h2>4. Install Cilium</h2>
+
+  <p>
+    Nodes will be in <code>NotReady</code> state until a CNI is installed. Install Cilium with
+    Hubble enabled for network observability:
+  </p>
+
+  <pre><code>kubectl config use-context portefaix-homelab
+
+# Install Cilium CRDs first
+make bootstrap-crds ENV=homelab CLOUD=k3s
+
+# Install Cilium
+make bootstrap-cilium ENV=homelab CLOUD=k3s</code></pre>
+
+  <p>Verify Cilium is healthy:</p>
+
+  <pre><code>cilium status
+
+kubectl get nodes -o wide
+NAME          STATUS   ROLES                  AGE     VERSION        INTERNAL-IP     EXTERNAL-IP
+portefaix     Ready    control-plane,master   3h37m   v1.30.2+k3s1   192.168.0.61    100.79.205.64
+portefaix-1   Ready    worker                 3h22m   v1.30.2+k3s1   192.168.0.208   100.115.34.57
+portefaix-2   Ready    worker                 3h20m   v1.30.2+k3s1   192.168.0.116   100.126.100.42
+portefaix-6   Ready    infra,worker           3h21m   v1.30.2+k3s1   192.168.0.233   100.111.218.32
+portefaix-7   Ready    infra,worker           3h18m   v1.30.2+k3s1   192.168.0.250   100.86.220.99</code></pre>
+
+  <h2>5. Label nodes by role</h2>
+
+  <p>
+    Portefaix uses node labels to schedule platform components on appropriate hardware. Label
+    each worker node according to its purpose:
+  </p>
+
+  <pre><code># Mark all workers
+kubectl label node portefaix-1 portefaix-2 \
+  node-role.kubernetes.io/worker=true \
+  node-role.kubernetes.io/lowcost=true
+
+kubectl label node portefaix-6 portefaix-7 \
+  node-role.kubernetes.io/worker=true \
+  node-role.kubernetes.io/infra=true</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Label</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>node-role.kubernetes.io/infra=true</code></td><td>Platform components (ingress, monitoring, cert-manager)</td></tr>
+      <tr><td><code>node-role.kubernetes.io/lowcost=true</code></td><td>PoCs, development workloads, batch jobs</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Configure Cloudflare R2 for Terraform state</h2>
+
+  <p>
+    Cloudflare R2 stores Terraform state files and S3-compatible storage for observability
+    components. Set up credentials in your Portefaix config file:
+  </p>
+
+  <pre><code>function setup_cloudflare() &#123;
+    export CLOUDFLARE_ACCOUNT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    export AWS_ACCESS_KEY_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    export AWS_SECRET_ACCESS_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+&#125;</code></pre>
+
+  <pre><code>. ./portefaix.sh k3s
+
+# Create the R2 bucket for Terraform state
+aws s3api create-bucket \
+  --bucket portefaix-homelab-tfstates \
+  --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com"</code></pre>
+
+  <h2>7. Provision DNS and observability storage with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/k3s/dns
+terraform init \
+  -backend-config="bucket=portefaix-homelab-tfstates" \
+  -backend-config="key=dns/homelab.tfstate" \
+  -backend-config="endpoint=https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" \
+  -backend-config="region=auto"
+terraform apply</code></pre>
+
+  <pre><code>cd portefaix-infrastructure/terraform/k3s/observability
+terraform init \
+  -backend-config="bucket=portefaix-homelab-tfstates" \
+  -backend-config="key=observability/homelab.tfstate" \
+  -backend-config="endpoint=https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" \
+  -backend-config="region=auto"
+terraform apply</code></pre>
+
+  <h2>8. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-k3s.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-k3s-homelab.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on Homelab</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>Storage / service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Networking</td><td>Cilium + Hubble</td><td>In-cluster eBPF-based CNI</td></tr>
+      <tr><td>Overlay network</td><td>Tailscale</td><td>Secure mesh between nodes and workstation</td></tr>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>Cloudflare R2 for long-term storage</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>Cloudflare DNS</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>Cloudflare DNS for DNS-01 challenges</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Tailscale for remote access:</strong> with Tailscale installed on all Pi nodes and
+      your workstation, you can reach <code>kubectl</code>, ArgoCD, and Grafana from anywhere
+      without port-forwarding or exposing services publicly. The Tailscale subnet router feature
+      allows you to reach the entire <code>192.168.0.0/24</code> home network over the VPN.
+    </p>
+  </div>
+
+  <h2>Troubleshooting</h2>
+
+  <h3>Nodes stuck in NotReady after k3sup join</h3>
+
+  <p>This is expected — Cilium must be installed before nodes become Ready. After running
+  <code>make bootstrap-cilium</code>, wait 60 seconds and check again:</p>
+
+  <pre><code>kubectl get nodes
+kubectl -n kube-system get pods -l k8s-app=cilium</code></pre>
+
+  <h3>R2 endpoint authentication errors</h3>
+
+  <pre><code># Verify R2 credentials work
+aws s3 ls \
+  --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com"</code></pre>
+
+  <p>Ensure your R2 API token has <strong>Object Read &amp; Write</strong> permissions on the target bucket.</p>
+
+  <h3>k3s node not joining</h3>
+
+  <pre><code># Check k3s agent logs on the failing node
+ssh pi@192.168.0.208 "journalctl -u k3s-agent -f"
+
+# Verify the server token matches
+ssh pi@192.168.0.61 "sudo cat /var/lib/rancher/k3s/server/node-token"</code></pre>
+</DocsLayout>
