@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: portefaix-website
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Nicolas
+    family-names: Lamirault
+    email: nicolas.lamirault@gmail.com
+abstract: >-
+  The official Portefaix project website.
+keywords:
+  - portefaix
+  - kubernetes
+  - gitops
+license: Apache-2.0
+repository-code: https://github.com/portefaix/portefaix-website
+url: https://github.com/portefaix/portefaix-website

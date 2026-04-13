@@ -1,0 +1,183 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeApis = e(`gcloud services enable \\
+  container.googleapis.com \\
+  compute.googleapis.com \\
+  cloudkms.googleapis.com \\
+  dns.googleapis.com \\
+  artifactregistry.googleapis.com \\
+  secretmanager.googleapis.com \\
+  iam.googleapis.com`);
+
+const codeVars = e(`# infrastructure/gcp/<env>/terraform.tfvars
+project_id  = "my-gcp-project"
+region      = "europe-west1"
+environment = "production"
+cluster_name = "portefaix-production"`);
+
+const codeInit = e(`cd infrastructure/gcp/production
+
+terraform init \\
+  -backend-config="bucket=<tfstate-bucket>" \\
+  -backend-config="prefix=portefaix/gcp/production"
+
+terraform plan -out=tfplan
+terraform apply tfplan`);
+
+const codeKubeconfig = e(`gcloud container clusters get-credentials \\
+  portefaix-production \\
+  --region europe-west1 \\
+  --project my-gcp-project`);
+
+const codeWI = e(`# Each component gets its own GSA
+gcloud iam service-accounts create external-dns \\
+  --project my-gcp-project
+
+# Bind to Kubernetes SA via Workload Identity
+gcloud iam service-accounts add-iam-policy-binding \\
+  external-dns@my-gcp-project.iam.gserviceaccount.com \\
+  --role roles/iam.workloadIdentityUser \\
+  --member "serviceAccount:my-gcp-project.svc.id.goog[external-dns/external-dns]"`);
+
+const codeInspec = e(`# Run InSpec tests against GCP
+inspec exec portefaix-inspec-gcp \\
+  -t gcp:// \\
+  --input project_id=my-gcp-project \\
+  --reporter cli junit:reports/inspec-gcp.xml`);
+
+const codeDestroy = e(`terraform destroy -var-file=terraform.tfvars`);
+---
+
+<DocsLayout title="GCP" description="Deploy and manage Portefaix on Google Cloud Platform.">
+  <p class="doc-eyebrow">// guides / infrastructure / gcp</p>
+
+  <h1>Google Cloud Platform</h1>
+
+  <p>
+    Portefaix provides a complete Terraform-based infrastructure stack for GCP, deploying a
+    production-grade GKE cluster with all supporting cloud resources: VPC, IAM, KMS, Cloud DNS,
+    Artifact Registry, and more.
+  </p>
+
+  <h2>Architecture</h2>
+
+  <div class="diagram-wrapper" style="margin: 1.5rem 0; border: 1px solid rgba(0,229,176,0.15); border-radius: 4px; overflow: hidden; background: #071221;">
+    <div style="padding: 0.5rem 1rem; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(0,229,176,0.1); display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #00bcd4; opacity: 0.8;">// infrastructure blueprint · Shared VPC · Private GKE · LGTM</span>
+    </div>
+    <a href="/diagrams/architecture-gcp.svg" target="_blank" rel="noopener" title="Open full-size GCP architecture diagram" style="display: block;">
+      <img src="/diagrams/architecture-gcp.svg" alt="Portefaix GCP Infrastructure Architecture — multi-environment Shared VPC, private GKE, LGTM observability stack" style="width: 100%; height: auto; display: block;" loading="lazy"/>
+    </a>
+  </div>
+
+  <p>The GCP infrastructure stack is structured around these core components:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>GCP Service</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Kubernetes cluster</td>
+        <td>GKE (Autopilot or Standard)</td>
+        <td>Container orchestration</td>
+      </tr>
+      <tr>
+        <td>Networking</td>
+        <td>VPC, Subnets, Cloud NAT</td>
+        <td>Private cluster networking</td>
+      </tr>
+      <tr>
+        <td>Identity</td>
+        <td>Workload Identity, IAM</td>
+        <td>Pod-level GCP authentication</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>Cloud KMS, Secret Manager</td>
+        <td>External Secrets Operator with GCP Secret Manager</td>
+      </tr>
+      <tr>
+        <td>DNS</td>
+        <td>Cloud DNS</td>
+        <td>External-DNS managed records</td>
+      </tr>
+      <tr>
+        <td>Registry</td>
+        <td>Artifact Registry</td>
+        <td>Container image storage</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>Cloud Storage (GCS)</td>
+        <td>Terraform state, Velero backups, Loki</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>GCP project with billing enabled</li>
+    <li><code>gcloud</code> CLI authenticated: <code>gcloud auth application-default login</code></li>
+    <li>Terraform ≥ 1.5</li>
+    <li><code>kubectl</code> and <code>helm</code></li>
+    <li>Required APIs enabled (see below)</li>
+  </ul>
+
+  <h3>Enable GCP APIs</h3>
+  <pre><code set:html={codeApis}></code></pre>
+
+  <h2>Deploying Infrastructure</h2>
+
+  <h3>1. Configure Variables</h3>
+  <pre><code set:html={codeVars}></code></pre>
+
+  <h3>2. Initialize and Apply</h3>
+  <pre><code set:html={codeInit}></code></pre>
+
+  <h3>3. Configure kubectl</h3>
+  <pre><code set:html={codeKubeconfig}></code></pre>
+
+  <h2>Workload Identity</h2>
+
+  <p>
+    Portefaix configures <a href="https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity" target="_blank" rel="noopener">Workload Identity</a>
+    so Kubernetes Service Accounts map directly to GCP Service Accounts — eliminating the need to
+    manage static credentials inside the cluster.
+  </p>
+
+  <pre><code set:html={codeWI}></code></pre>
+
+  <h2>Compliance Testing with InSpec</h2>
+
+  <p>
+    Portefaix uses <a href="https://www.inspec.io" target="_blank" rel="noopener">Chef InSpec</a>
+    to validate that the GCP infrastructure meets security and compliance requirements:
+  </p>
+
+  <pre><code set:html={codeInspec}></code></pre>
+
+  <p>Compliance checks cover: GKE configuration, VPC settings, IAM bindings, KMS key rotation, and more.</p>
+
+  <h2>Destroying Infrastructure</h2>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>Warning:</strong> This will permanently destroy all resources including the GKE cluster,
+      all data in GCS buckets, and DNS records. Ensure all important data is backed up.
+    </p>
+  </div>
+
+  <pre><code set:html={codeDestroy}></code></pre>
+</DocsLayout>

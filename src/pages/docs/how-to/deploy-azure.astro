@@ -1,0 +1,250 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on Azure" description="How to deploy Portefaix on Microsoft Azure with AKS and Workload Identity.">
+  <p class="doc-eyebrow">// how-to guides · azure</p>
+
+  <h1>Deploy Portefaix on Azure</h1>
+
+  <p>
+    This guide shows you how to deploy a production-ready Portefaix platform on Microsoft Azure
+    using AKS, Azure Workload Identity for keyless authentication, Azure Blob Storage for
+    Terraform state, and GitHub Actions with OIDC federation for infrastructure automation.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running AKS cluster with Portefaix stacks continuously reconciled
+      by ArgoCD, using Azure Managed Identity bound to Kubernetes service accounts — no client
+      secrets stored anywhere in the cluster.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>Azure subscription with <strong>Contributor</strong> or <strong>Owner</strong> role</li>
+    <li><code>az</code> CLI v2.55+ authenticated (<code>az login</code>)</li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
+    <li>Resource provider registrations: <code>Microsoft.ContainerService</code>, <code>Microsoft.KeyVault</code>, <code>Microsoft.ManagedIdentity</code></li>
+    <li>A GitHub organisation for your GitOps repositories</li>
+  </ul>
+
+  <h2>1. Configure your environment</h2>
+
+  <pre><code>az login
+az account set --subscription "YOUR_SUBSCRIPTION_NAME_OR_ID"
+
+export AZURE_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+export AZURE_TENANT_ID="$(az account show --query tenantId -o tsv)"
+export AZURE_LOCATION="westeurope"
+export PORTEFAIX_ENV="staging"
+export AZURE_RG="portefaix-$PORTEFAIX_ENV"</code></pre>
+
+  <h2>2. Register required resource providers</h2>
+
+  <pre><code>az provider register --namespace Microsoft.ContainerService
+az provider register --namespace Microsoft.KeyVault
+az provider register --namespace Microsoft.ManagedIdentity
+az provider register --namespace Microsoft.Storage
+az provider register --namespace Microsoft.Network
+
+# Wait for registration (may take a few minutes)
+az provider show --namespace Microsoft.ContainerService --query registrationState -o tsv</code></pre>
+
+  <h2>3. Create a service principal for Terraform</h2>
+
+  <p>
+    Create a service principal with Contributor scope on your subscription. Terraform uses this
+    to provision Azure resources:
+  </p>
+
+  <pre><code>az ad sp create-for-rbac \
+  --name "portefaix-terraform-$PORTEFAIX_ENV" \
+  --role Contributor \
+  --scopes "/subscriptions/$AZURE_SUBSCRIPTION_ID" \
+  --output json</code></pre>
+
+  <p>Export the returned values for use by Terraform:</p>
+
+  <pre><code>export ARM_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+export ARM_TENANT_ID="$AZURE_TENANT_ID"
+export ARM_CLIENT_ID="&lt;appId from output&gt;"
+export ARM_CLIENT_SECRET="&lt;password from output&gt;"</code></pre>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>For production:</strong> replace the client secret with
+      <a href="https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure" target="_blank" rel="noopener">federated credentials (OIDC)</a>
+      so GitHub Actions can authenticate without storing any secret. The Terraform root module
+      creates the federated credential configuration automatically.
+    </p>
+  </div>
+
+  <h2>4. Create Terraform remote state storage</h2>
+
+  <p>
+    Terraform state is stored in Azure Blob Storage with a dedicated resource group and storage
+    account. Create these before running any other Terraform modules:
+  </p>
+
+  <pre><code># Resource group for Terraform state
+az group create \
+  --name portefaix-tfstate \
+  --location $AZURE_LOCATION
+
+# Storage account (name must be globally unique, 3-24 lowercase alphanumeric)
+az storage account create \
+  --name portefaixtfstate \
+  --resource-group portefaix-tfstate \
+  --location $AZURE_LOCATION \
+  --sku Standard_LRS \
+  --allow-blob-public-access false \
+  --min-tls-version TLS1_2
+
+# Retrieve the storage account key
+export AZ_STORAGE_ACCOUNT_KEY="$(az storage account keys list \
+  --account-name portefaixtfstate \
+  --resource-group portefaix-tfstate \
+  --query '[0].value' -o tsv)"
+
+# Create the container for state files
+az storage container create \
+  --name tfstate \
+  --account-name portefaixtfstate \
+  --account-key "$AZ_STORAGE_ACCOUNT_KEY"</code></pre>
+
+  <h2>5. Enable preview features</h2>
+
+  <p>
+    Some Portefaix features require Azure preview capabilities. Enable the AKS Workload Identity
+    and OIDC issuer features:
+  </p>
+
+  <pre><code>az feature register \
+  --namespace "Microsoft.ContainerService" \
+  --name "EnableWorkloadIdentityPreview"
+
+az feature register \
+  --namespace "Microsoft.ContainerService" \
+  --name "EnableOIDCIssuerPreview"
+
+# Wait until both show "Registered"
+az feature show \
+  --namespace "Microsoft.ContainerService" \
+  --name "EnableWorkloadIdentityPreview" \
+  --query properties.state -o tsv</code></pre>
+
+  <h2>6. Provision the AKS cluster with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/azure/aks
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <p>Key variables in <code>terraform.tfvars</code>:</p>
+
+  <pre><code>subscription_id          = "your-subscription-id"
+location                 = "westeurope"
+resource_group           = "portefaix-staging"
+cluster_name             = "portefaix-staging"
+kubernetes_version       = "1.31"
+oidc_issuer_enabled      = true
+workload_identity_enabled = true</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="resource_group_name=portefaix-tfstate" \
+  -backend-config="storage_account_name=portefaixtfstate" \
+  -backend-config="container_name=tfstate" \
+  -backend-config="key=aks/$PORTEFAIX_ENV.tfstate"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>7. Configure Azure Workload Identity</h2>
+
+  <p>
+    Azure Workload Identity uses OIDC federation between Kubernetes service accounts and Azure
+    Managed Identities — no client secrets enter the cluster. The Terraform module creates all
+    Managed Identities and Federated Credentials automatically. Verify:
+  </p>
+
+  <pre><code># Verify the Workload Identity mutating webhook is running
+kubectl get pods -n azure-workload-identity-system
+
+# Check Federated Credentials for a managed identity
+az identity federated-credential list \
+  --identity-name portefaix-external-secrets \
+  --resource-group $AZURE_RG \
+  --output table</code></pre>
+
+  <h2>8. Fetch cluster credentials</h2>
+
+  <pre><code>. ./portefaix.sh azure
+
+az aks get-credentials \
+  --resource-group $AZURE_RG \
+  --name portefaix-$PORTEFAIX_ENV \
+  --overwrite-existing
+
+kubectl get nodes
+NAME                           STATUS   ROLES    AGE   VERSION
+aks-core-19506595-vmss000000   Ready    agent    8h    v1.31.0</code></pre>
+
+  <h2>9. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-azure.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-azure-$PORTEFAIX_ENV.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on Azure</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>Azure service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>Azure Blob Storage for long-term storage</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>Azure Key Vault</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>Azure DNS</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>Azure DNS for DNS-01 challenges</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Troubleshooting</h2>
+
+  <h3>Workload Identity webhook not injecting annotations</h3>
+
+  <pre><code># Check the webhook configuration exists
+kubectl get mutatingwebhookconfigurations | grep workload-identity
+
+# Check the webhook pod logs
+kubectl logs -n azure-workload-identity-system \
+  -l app=workload-identity-webhook --tail=50</code></pre>
+
+  <h3>AKS OIDC issuer URL not set</h3>
+
+  <pre><code>az aks show \
+  --resource-group $AZURE_RG \
+  --name portefaix-$PORTEFAIX_ENV \
+  --query oidcIssuerProfile.issuerUrl -o tsv</code></pre>
+
+  <p>If empty, the cluster was created without the OIDC issuer. Enable it:</p>
+
+  <pre><code>az aks update \
+  --resource-group $AZURE_RG \
+  --name portefaix-$PORTEFAIX_ENV \
+  --enable-oidc-issuer \
+  --enable-workload-identity</code></pre>
+</DocsLayout>

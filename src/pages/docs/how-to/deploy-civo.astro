@@ -1,0 +1,136 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on Civo" description="How to deploy Portefaix on Civo with K3s-based managed Kubernetes.">
+  <p class="doc-eyebrow">// how-to guides · civo</p>
+
+  <h1>Deploy Portefaix on Civo</h1>
+
+  <p>
+    This guide shows you how to deploy a Portefaix platform on Civo Cloud using Civo's
+    K3s-based managed Kubernetes service — a lightweight, fast-provisioning alternative to
+    full Kubernetes clusters.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running Civo Kubernetes cluster with Portefaix stacks
+      continuously reconciled by ArgoCD.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>Civo account with a valid API token</li>
+    <li><code>civo</code> CLI installed and authenticated</li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
+  </ul>
+
+  <h2>1. Configure your environment</h2>
+
+  <pre><code>export CIVO_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export CIVO_REGION="LON1"   # LON1 | FRA1 | NYC1 | PHX1
+export PORTEFAIX_ENV="dev"</code></pre>
+
+  <pre><code>. ./portefaix.sh civo</code></pre>
+
+  <p>Verify CLI access:</p>
+
+  <pre><code>civo kubernetes list</code></pre>
+
+  <h2>2. Provision the network with Terraform</h2>
+
+  <p>
+    The network module creates a dedicated Civo network and firewall for the Kubernetes cluster:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/terraform/civo/network
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>region       = "LON1"
+network_name = "portefaix-dev"</code></pre>
+
+  <pre><code>terraform init
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>3. Provision the Kubernetes cluster with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/civo/kubernetes
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>region          = "LON1"
+cluster_name    = "portefaix-dev"
+node_size       = "g4s.kube.medium"
+node_count      = 3
+network_name    = "portefaix-dev"</code></pre>
+
+  <pre><code>terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>4. Fetch cluster credentials</h2>
+
+  <pre><code>export CLUSTER_ID="$(terraform output -raw cluster_id)"
+
+civo kubernetes config "$CLUSTER_ID" \
+  --region $CIVO_REGION \
+  --save --merge
+
+kubectl config use-context portefaix-dev
+
+kubectl get nodes
+NAME                                                       STATUS   ROLES    AGE     VERSION
+k3s-portefaix-dev-civo-691a-de1391-node-pool-8c2e-859cq   Ready    &lt;none&gt;   6m29s   v1.30.5+k3s1</code></pre>
+
+  <h2>5. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-civo.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-civo-$PORTEFAIX_ENV.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on Civo</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki</td><td>Local PV storage (smaller footprint for dev)</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>HTTP-01 challenge via Civo LoadBalancer</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Tip:</strong> Civo clusters use K3s which ships with Traefik as the default ingress
+      controller. The Portefaix values file for Civo disables the K3s-bundled Traefik and installs
+      ingress-nginx instead, for consistency with other cloud providers.
+    </p>
+  </div>
+
+  <h2>Troubleshooting</h2>
+
+  <h3>Cluster not showing in kubeconfig after merge</h3>
+
+  <pre><code>civo kubernetes config "$CLUSTER_ID" --region $CIVO_REGION
+
+# Manually merge into existing kubeconfig
+KUBECONFIG="$HOME/.kube/config:$HOME/.kube/portefaix-civo" \
+  kubectl config view --flatten > /tmp/merged.yaml
+
+mv /tmp/merged.yaml $HOME/.kube/config</code></pre>
+</DocsLayout>

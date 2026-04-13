@@ -1,0 +1,164 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on IBM Cloud" description="How to deploy Portefaix on IBM Cloud with IKS and COS-backed Terraform state.">
+  <p class="doc-eyebrow">// how-to guides · ibmcloud</p>
+
+  <h1>Deploy Portefaix on IBM Cloud</h1>
+
+  <p>
+    This guide shows you how to deploy a Portefaix platform on IBM Cloud using IBM Kubernetes
+    Service (IKS), Cloud Object Storage (COS) for Terraform state, and the IBM Cloud CLI
+    for cluster management.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running IKS cluster across multiple availability zones, with
+      Portefaix stacks continuously reconciled by ArgoCD.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>IBM Cloud account with an API key (<strong>Administrator</strong> role on the target resource group)</li>
+    <li><code>ibmcloud</code> CLI with the Kubernetes Service and Container Registry plugins</li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
+  </ul>
+
+  <h2>1. Configure your environment</h2>
+
+  <pre><code>export IC_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export IAAS_CLASSIC_USERNAME="your-classic-username"
+export IAAS_CLASSIC_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+export IBM_REGION="eu-de"     # eu-de | eu-gb | us-south | us-east | ap-north
+export IBM_RG="portefaix"     # resource group name
+export PORTEFAIX_ENV="staging"</code></pre>
+
+  <pre><code>. ./portefaix.sh ibmcloud
+
+# Authenticate the CLI
+ibmcloud login --apikey "$IC_API_KEY" -r "$IBM_REGION" -g "$IBM_RG"
+ibmcloud ks init</code></pre>
+
+  <h2>2. Create Terraform remote state storage</h2>
+
+  <p>
+    IBM Cloud Object Storage (COS) is S3-compatible when accessed with HMAC credentials.
+    Create a COS instance and generate HMAC keys for Terraform:
+  </p>
+
+  <pre><code># Create a COS service instance
+ibmcloud resource service-instance-create portefaix-cos \
+  cloud-object-storage standard global \
+  -g "$IBM_RG"
+
+# Create HMAC credentials (required for S3-compatible API access)
+ibmcloud resource service-key-create portefaix-cos-hmac Writer \
+  --instance-name portefaix-cos \
+  --parameters '&#123;"HMAC":true&#125;'
+
+# Extract the HMAC access key and secret
+ibmcloud resource service-key portefaix-cos-hmac --output JSON | \
+  jq '.credentials.cos_hmac_keys'</code></pre>
+
+  <pre><code>export AWS_ACCESS_KEY_ID="&lt;access_key_id from HMAC output&gt;"
+export AWS_SECRET_ACCESS_KEY="&lt;secret_access_key from HMAC output&gt;"</code></pre>
+
+  <pre><code># Create a bucket for Terraform state
+ibmcloud cos bucket-create \
+  --bucket portefaix-tfstate \
+  --ibm-service-instance-id "$(ibmcloud resource service-instance portefaix-cos --output JSON | jq -r '.[0].id')" \
+  --region "$IBM_REGION"</code></pre>
+
+  <h2>3. Provision the VPC with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/ibmcloud/vpc
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>region           = "eu-de"
+resource_group   = "portefaix"
+vpc_name         = "portefaix-staging"</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="bucket=portefaix-tfstate" \
+  -backend-config="key=vpc/$PORTEFAIX_ENV.tfstate" \
+  -backend-config="region=$IBM_REGION" \
+  -backend-config="endpoint=https://s3.$IBM_REGION.cloud-object-storage.appdomain.cloud"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>4. Provision the IKS cluster with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/ibmcloud/iks
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <pre><code>region           = "eu-de"
+resource_group   = "portefaix"
+cluster_name     = "portefaix-staging"
+k8s_version      = "1.31"
+worker_flavor    = "bx2.4x16"
+worker_count     = 3</code></pre>
+
+  <pre><code>terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>5. Fetch cluster credentials</h2>
+
+  <pre><code>ibmcloud ks cluster config \
+  --cluster portefaix-staging \
+  --admin
+
+kubectl get nodes
+NAME            STATUS   ROLES    AGE   VERSION
+10.242.0.10     Ready    &lt;none&gt;   13m   v1.31.1+IKS
+10.242.0.7      Ready    &lt;none&gt;   29m   v1.31.1+IKS
+10.242.128.10   Ready    &lt;none&gt;   12m   v1.31.1+IKS
+10.242.128.7    Ready    &lt;none&gt;   29m   v1.31.1+IKS
+10.242.64.6     Ready    &lt;none&gt;   29m   v1.31.1+IKS
+10.242.64.8     Ready    &lt;none&gt;   13m   v1.31.1+IKS</code></pre>
+
+  <h2>6. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-ibmcloud.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-ibmcloud-$PORTEFAIX_ENV.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on IBM Cloud</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>IBM Cloud service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>Cloud Object Storage for long-term storage</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>Secrets Manager</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>IBM Cloud DNS Services</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>IBM Cloud DNS for DNS-01 challenges</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Multi-zone clusters:</strong> IKS supports spreading worker nodes across up to
+      3 availability zones in a region. Set <code>zones = ["eu-de-1", "eu-de-2", "eu-de-3"]</code>
+      in Terraform for production high-availability deployments.
+    </p>
+  </div>
+</DocsLayout>

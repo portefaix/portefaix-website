@@ -1,28 +1,43 @@
-# How to Contribute
+# Contributing
 
-We'd love to accept your patches and contributions to this project. There are
-just a few small guidelines you need to follow.
+Contributions are welcome via GitHub pull requests. This document outlines the
+process to help get your contribution accepted.
 
-## Contributor License Agreement
+## Sign off Your Work
 
-Contributions to this project must be accompanied by a Contributor License
-Agreement. You (or your employer) retain the copyright to your contribution;
-this simply gives us permission to use and redistribute your contributions as
-part of the project. Head over to <https://cla.developers.google.com/> to see
-your current agreements on file or to sign a new one.
+The Developer Certificate of Origin (DCO) is a lightweight way for contributors
+to certify that they wrote or otherwise have the right to submit the code they
+are contributing to the project. Here is the full text of the
+[DCO](http://developercertificate.org/). Contributors must sign-off that they
+adhere to these requirements by adding a `Signed-off-by` line to commit
+messages.
 
-You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.
+```text
+This is my commit message
 
-## Code reviews
+Signed-off-by: Random J Developer <random@developer.example.org>
+```
 
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+See `git help commit`:
 
-## Community Guidelines
+```text
+-s, --signoff
+    Add Signed-off-by line by the committer at the end of the commit log
+    message. The meaning of a signoff depends on the project, but it typically
+    certifies that committer has the rights to submit this work under the same
+    license and agrees to a Developer Certificate of Origin (see
+    http://developercertificate.org/ for more information).
+```
 
-This project follows
-[Google's Open Source Community Guidelines](https://opensource.google.com/conduct/).
+## How to Contribute
+
+- Fork this repository, develop, and test your changes
+- Remember to sign off your commits as described above
+- Submit a pull request
+
+### Community Requirements
+
+This project is released with a
+[Contributor Covenant](https://www.contributor-covenant.org). By participating
+in this project you agree to abide by its terms. See
+[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).

@@ -1,0 +1,314 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on AWS" description="How to deploy Portefaix on Amazon Web Services with EKS and Pod Identity.">
+  <p class="doc-eyebrow">// how-to guides · aws</p>
+
+  <h1>Deploy Portefaix on AWS</h1>
+
+  <p>
+    This guide shows you how to deploy a production-ready Portefaix platform on Amazon Web Services
+    using a multi-account AWS Organization, EKS with EKS Pod Identity for keyless IAM
+    authentication, and GitHub Actions for infrastructure automation.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running EKS cluster in a dedicated AWS account, with Portefaix
+      stacks continuously reconciled by ArgoCD and IAM roles bound to workloads via EKS Pod Identity —
+      no static credentials anywhere in the cluster.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>AWS root account — you will create an Organization and sub-accounts from it</li>
+    <li><code>aws</code> CLI v2 configured with admin credentials (<code>aws configure</code> or AWS SSO)</li>
+    <li>Terraform ≥ 1.5 and kubectl installed locally</li>
+    <li>A GitHub organisation for your GitOps repositories</li>
+  </ul>
+
+  <h2>1. Set up AWS Organizations</h2>
+
+  <p>
+    Portefaix follows a multi-account model: a <em>root</em> management account, and separate
+    workload accounts per environment (staging, production). This isolates blast radius and
+    simplifies IAM governance.
+  </p>
+
+  <p>
+    From the AWS Console, create an Organization and enable Service Control Policies (SCPs)
+    and Tag Policies. Then apply the Portefaix root Terraform module to create the Organizational
+    Units and accounts declaratively:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/terraform/aws/root
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <p>Also enable the AWS Health organizational view for cross-account incident visibility:</p>
+
+  <ul>
+    <li>Go to <strong>Personal Health Dashboard → Organizational view → Configurations</strong></li>
+    <li>Click <strong>Enable organizational view</strong></li>
+  </ul>
+
+  <h2>2. Configure Portefaix environment credentials</h2>
+
+  <p>
+    Create your local Portefaix configuration file at
+    <code>$HOME/.config/portefaix/portefaix.sh</code>. This file is sourced before running
+    Terraform or <code>kubectl</code> commands and sets the environment variables used across
+    all tooling:
+  </p>
+
+  <pre><code>HOME_IP=$(curl -s http://ifconfig.me)
+SLACK_WEBHOOK_NOTIFS="https://hooks.slack.com/services/xxx/xxx"
+
+function setup_aws() &#123;
+    export AWS_ACCESS_KEY_ID="..."
+    export AWS_SECRET_ACCESS_KEY="..."
+    export AWS_DEFAULT_REGION="eu-west-1"
+    export AWS_REGION="eu-west-1"
+    # Terraform variable pass-through
+    export TF_VAR_slack_webhook_url="$SLACK_WEBHOOK_NOTIFS"
+    export TF_VAR_org_email="your-root@example.com"
+    export TF_VAR_org_email_domain="example.com"
+    export TF_VAR_org_admin_username="portefaix-admin"
+    export TF_VAR_admin_ipv4="[\"$HOME_IP/32\"]"
+&#125;</code></pre>
+
+  <p>Load the credentials for your session:</p>
+
+  <pre><code>. ./portefaix.sh aws</code></pre>
+
+  <h2>3. Create Terraform remote state storage</h2>
+
+  <p>
+    Terraform state for the AWS workload account is stored in S3 with DynamoDB locking.
+    Create these resources in the target account before running any other Terraform modules:
+  </p>
+
+  <pre><code># Create the S3 bucket for Terraform state
+aws s3api create-bucket \
+  --bucket portefaix-tfstate-$AWS_ACCOUNT_ID \
+  --region $AWS_REGION \
+  --create-bucket-configuration LocationConstraint=$AWS_REGION
+
+aws s3api put-bucket-versioning \
+  --bucket portefaix-tfstate-$AWS_ACCOUNT_ID \
+  --versioning-configuration Status=Enabled
+
+# Create the DynamoDB table for state locking
+aws dynamodb create-table \
+  --table-name portefaix-tfstate-lock \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region $AWS_REGION</code></pre>
+
+  <h2>4. Provision the EKS cluster with Terraform</h2>
+
+  <p>
+    The EKS Terraform module creates the cluster, VPC, node groups, and all IAM roles required
+    for Pod Identity. Edit the variables file for your target environment, then apply:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/terraform/aws/eks
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <p>Key variables to set in <code>terraform.tfvars</code>:</p>
+
+  <pre><code>aws_region      = "eu-west-1"
+cluster_name    = "portefaix-staging"
+cluster_version = "1.31"
+vpc_cidr        = "10.0.0.0/16"
+# Enable EKS Pod Identity (replaces IRSA on new clusters)
+pod_identity_enabled = true</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="bucket=portefaix-tfstate-$AWS_ACCOUNT_ID" \
+  -backend-config="key=eks/staging.tfstate" \
+  -backend-config="region=$AWS_REGION" \
+  -backend-config="dynamodb_table=portefaix-tfstate-lock"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>5. Authenticate to the cluster</h2>
+
+  <p>
+    After the Terraform apply, assume the administrator role for the target account and update
+    your local kubeconfig:
+  </p>
+
+  <pre><code># Assume the admin role for the staging account
+aws sts assume-role \
+  --role-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/portefaix-admin \
+  --role-session-name portefaix-session \
+  --output json | \
+  jq -r '.Credentials | "export AWS_ACCESS_KEY_ID=\(.AccessKeyId)\nexport AWS_SECRET_ACCESS_KEY=\(.SecretAccessKey)\nexport AWS_SESSION_TOKEN=\(.SessionToken)"' | \
+  source /dev/stdin
+
+# Update kubeconfig
+aws eks update-kubeconfig \
+  --name portefaix-staging \
+  --region $AWS_REGION</code></pre>
+
+  <p>Verify the cluster nodes are ready:</p>
+
+  <pre><code>kubectl get nodes
+NAME                                         STATUS   ROLES    AGE   VERSION
+ip-10-0-13-85.eu-west-1.compute.internal     Ready    &lt;none&gt;   10m   v1.31.0-eks-a737599
+ip-10-0-29-115.eu-west-1.compute.internal    Ready    &lt;none&gt;   10m   v1.31.0-eks-a737599
+ip-10-0-60-137.eu-west-1.compute.internal    Ready    &lt;none&gt;   10m   v1.31.0-eks-a737599</code></pre>
+
+  <h2>6. Configure EKS Pod Identity</h2>
+
+  <p>
+    EKS Pod Identity lets Pods assume IAM roles without storing credentials. The Terraform module
+    installs the Pod Identity Agent add-on and creates the Pod Identity Associations. Verify
+    the agent is running:
+  </p>
+
+  <pre><code>kubectl get daemonset -n kube-system eks-pod-identity-agent</code></pre>
+
+  <p>List all Pod Identity Associations created by Terraform:</p>
+
+  <pre><code>aws eks list-pod-identity-associations \
+  --cluster-name portefaix-staging \
+  --region $AWS_REGION</code></pre>
+
+  <p>
+    Each platform component (External Secrets Operator, External DNS, cert-manager, etc.) has
+    a dedicated IAM role with least-privilege policies, bound to the corresponding Kubernetes
+    service account through a Pod Identity Association.
+  </p>
+
+  <h2>7. Connect via Bastion (optional)</h2>
+
+  <p>
+    If your EKS cluster runs in a private VPC, use the AWS Systems Manager Session Manager to
+    access EC2 or EKS nodes without exposing SSH ports. Install the
+    <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html" target="_blank" rel="noopener">SSM Session Manager plugin</a>
+    then start a session:
+  </p>
+
+  <pre><code># List running instances
+aws ec2 describe-instances \
+  --filters "Name=instance-state-name,Values=running" \
+  --query "Reservations[*].Instances[*].[InstanceId,Tags[?Key=='Name'].Value|[0]]" \
+  --output table
+
+# Start a session (no SSH key required)
+aws ssm start-session --target i-0123456789abcdef0</code></pre>
+
+  <h2>8. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <p>Install ArgoCD using the AWS-specific values file, then apply the app-of-apps bootstrap:</p>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-aws.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-aws-staging.yaml</code></pre>
+
+  <p>Monitor the initial sync — all applications should reach <code>Healthy / Synced</code>:</p>
+
+  <pre><code>argocd app list
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>9. Automate with GitHub Actions</h2>
+
+  <p>
+    The Portefaix infrastructure repository ships GitHub Actions workflows for all Terraform
+    operations. Workflows authenticate via
+    <a href="https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services" target="_blank" rel="noopener">OIDC federation</a>
+    — no AWS credentials stored as GitHub secrets.
+  </p>
+
+  <p>
+    Configure the OIDC provider in your AWS account (the Terraform root module does this):
+  </p>
+
+  <pre><code># Verify the OIDC provider exists
+aws iam list-open-id-connect-providers</code></pre>
+
+  <p>
+    Once configured, GitHub Actions <code>plan</code> and <code>apply</code> workflows run on
+    pull requests and merges automatically. See
+    <code>.github/workflows/terraform-aws.yml</code> in
+    <code>portefaix-infrastructure</code> for the workflow definition.
+  </p>
+
+  <h2>Stacks available on AWS</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>AWS service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>S3 for long-term storage (Thanos, Loki, Tempo)</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>Secrets Manager + SSM Parameter Store</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>Route 53</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>Route 53 for DNS-01 challenges</td></tr>
+      <tr><td>Load balancing</td><td>AWS Load Balancer Controller</td><td>ALB / NLB</td></tr>
+      <tr><td>Cluster autoscaling</td><td>Karpenter</td><td>EC2 (Spot + On-Demand)</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Tip:</strong> for cost optimisation, enable Karpenter with mixed instance types and
+      Spot interruption handling. Set <code>karpenter_enabled = true</code> in the EKS Terraform
+      module. Karpenter works alongside EKS Managed Node Groups — keep at least one node group
+      for critical system workloads.
+    </p>
+  </div>
+
+  <h2>Troubleshooting</h2>
+
+  <h3>Pod Identity not working</h3>
+
+  <p>Verify the Pod Identity Agent DaemonSet is running on all nodes:</p>
+
+  <pre><code>kubectl get daemonset -n kube-system eks-pod-identity-agent -o wide</code></pre>
+
+  <p>Check that the Pod Identity Association exists for the service account:</p>
+
+  <pre><code>aws eks describe-pod-identity-association \
+  --cluster-name portefaix-staging \
+  --association-id a-xxxxxxxxxxxxxxxxx \
+  --region $AWS_REGION</code></pre>
+
+  <h3>kubectl access denied after role assumption</h3>
+
+  <p>
+    If you get <code>error: You must be logged in to the server (Unauthorized)</code>, your
+    assumed role may not be in the EKS access entries. Add it:
+  </p>
+
+  <pre><code>aws eks create-access-entry \
+  --cluster-name portefaix-staging \
+  --principal-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/portefaix-admin \
+  --type STANDARD \
+  --region $AWS_REGION
+
+aws eks associate-access-policy \
+  --cluster-name portefaix-staging \
+  --principal-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/portefaix-admin \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+  --access-scope type=cluster \
+  --region $AWS_REGION</code></pre>
+</DocsLayout>

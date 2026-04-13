@@ -1,0 +1,134 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const quadrants = [
+  {
+    type: "Tutorials",
+    color: "#0284c7",
+    accent: "rgba(2,132,199,0.1)",
+    border: "rgba(2,132,199,0.25)",
+    eyebrow: "learning · practice",
+    desc: "Step-by-step lessons that take you from zero to a running platform. Follow along to build understanding through doing.",
+    items: [
+      { title: "Your First Cluster", href: "/docs/tutorials/", desc: "Bootstrap a complete Portefaix platform from scratch on your chosen cloud." },
+    ],
+  },
+  {
+    type: "How-to Guides",
+    color: "#7c3aed",
+    accent: "rgba(124,58,237,0.1)",
+    border: "rgba(124,58,237,0.25)",
+    eyebrow: "application · practice",
+    desc: "Goal-oriented recipes for specific tasks. Assumes you know the basics — these guides get you to a result efficiently.",
+    items: [
+      { title: "Deploy on GCP",      href: "/docs/how-to/deploy-gcp/",      desc: "Provision GKE + Workload Identity + Portefaix stacks." },
+      { title: "Deploy on AWS",      href: "/docs/how-to/deploy-aws/",      desc: "Provision EKS + Pod Identity + Portefaix stacks." },
+      { title: "Deploy on Azure",    href: "/docs/how-to/deploy-azure/",    desc: "Provision AKS + Workload Identity + Portefaix stacks." },
+      { title: "Deploy on Scaleway", href: "/docs/how-to/deploy-scaleway/", desc: "Provision Kapsule + Spacelift + Portefaix stacks." },
+      { title: "Bootstrap ArgoCD",   href: "/docs/how-to/bootstrap-argocd/","desc": "Install and configure ArgoCD as the GitOps engine." },
+    ],
+  },
+  {
+    type: "Reference",
+    color: "#e11d48",
+    accent: "rgba(225,29,72,0.1)",
+    border: "rgba(225,29,72,0.25)",
+    eyebrow: "application · theory",
+    desc: "Technical descriptions of the machinery: APIs, components, policies, and chart catalogue. Consult when you need facts.",
+    items: [
+      { title: "Components",      href: "/docs/reference/components/", desc: "Complete inventory of every platform component and its role." },
+      { title: "Helm Charts Hub", href: "/docs/reference/hub/",        desc: "Curated Helm charts optimised for Portefaix." },
+      { title: "Policies",        href: "/docs/reference/policies/",   desc: "Kyverno + OPA/CEL policy catalogue with policy codes." },
+    ],
+  },
+  {
+    type: "Explanation",
+    color: "#d97706",
+    accent: "rgba(217,119,6,0.1)",
+    border: "rgba(217,119,6,0.25)",
+    eyebrow: "learning · theory",
+    desc: "Background, rationale, and architectural thinking. Read these to understand *why* Portefaix is designed the way it is.",
+    items: [
+      { title: "GitOps Principles",     href: "/docs/explanation/gitops-principles/",     desc: "The four OpenGitOps principles and how Portefaix applies them." },
+      { title: "Platform Architecture", href: "/docs/explanation/platform-architecture/", desc: "How the sub-projects fit together and the reasoning behind each layer." },
+    ],
+  },
+];
+---
+
+<DocsLayout title="Documentation">
+  <p class="doc-eyebrow">// docs · overview</p>
+
+  <h1>Portefaix Documentation</h1>
+
+  <p>
+    Portefaix is a complete, open-source platform engineering toolkit for building production-grade
+    Kubernetes platforms on any cloud. These docs are organised following the
+    <strong>Diátaxis</strong> framework — four distinct documentation types, each serving a
+    different reader need.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;margin:2rem 0;">
+    {quadrants.map((q) => (
+      <div style={`background:${q.accent};border:1px solid ${q.border};border-radius:12px;padding:1.25rem 1.5rem;`}>
+        <p style={`font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:${q.color};margin-bottom:0.35rem;`}>{q.eyebrow}</p>
+        <h3 style={`font-size:1rem;font-weight:600;color:var(--t1);margin:0 0 0.5rem;`}>{q.type}</h3>
+        <p style="font-size:0.88rem;color:var(--t2);line-height:1.6;margin-bottom:1rem;">{q.desc}</p>
+        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.35rem;">
+          {q.items.map((item) => (
+            <li>
+              <a href={item.href} style={`font-size:0.85rem;color:${q.color};text-decoration:underline;text-underline-offset:2px;`}>
+                {item.title}
+              </a>
+              <span style="font-size:0.8rem;color:var(--t3);"> — {item.desc}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+  <h2>Platform Sub-projects</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sub-project</th>
+        <th>Description</th>
+        <th>Repository</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>portefaix-kubernetes</strong></td>
+        <td>Production Kubernetes configurations: operators, GitOps, observability.</td>
+        <td><a href="https://github.com/portefaix/portefaix-kubernetes" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>portefaix-infrastructure</strong></td>
+        <td>Terraform modules for cloud infrastructure across AWS, GCP, Azure, and more.</td>
+        <td><a href="https://github.com/portefaix/portefaix-infrastructure" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>portefaix-hub</strong></td>
+        <td>Curated Helm charts optimised for the Portefaix platform.</td>
+        <td><a href="https://github.com/portefaix/portefaix-hub" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>portefaix-policies</strong></td>
+        <td>OPA/Rego and Kyverno policies for security, compliance, and governance.</td>
+        <td><a href="https://github.com/portefaix/portefaix-policies" target="_blank" rel="noopener">GitHub ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>FluxCD is deprecated</strong> as of Portefaix v2.0.0. ArgoCD is the recommended GitOps engine.
+      The FluxCD guide is preserved at <a href="/docs/guides/fluxcd/">docs/guides/fluxcd</a>.
+    </p>
+  </div>
+</DocsLayout>

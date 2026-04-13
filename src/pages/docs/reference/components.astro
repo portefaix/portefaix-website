@@ -1,0 +1,137 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const components = [
+  {
+    category: "Infrastructure as Code",
+    color: "#34d399",
+    items: [
+      { name: "Terraform", role: "Cloud resource provisioning", url: "https://www.terraform.io" },
+      { name: "Crossplane", role: "Kubernetes-native infrastructure management", url: "https://crossplane.io" },
+      { name: "Cluster API", role: "Declarative cluster lifecycle management", url: "https://cluster-api.sigs.k8s.io" },
+    ],
+  },
+  {
+    category: "GitOps",
+    color: "#818cf8",
+    items: [
+      { name: "ArgoCD", role: "Application delivery and sync", url: "https://argo-cd.readthedocs.io" },
+      { name: "FluxCD (deprecated in v2.0.0)", role: "Infrastructure reconciliation and image automation — replaced by ArgoCD", url: "https://fluxcd.io" },
+      { name: "Argo Rollouts", role: "Progressive delivery (canary, blue-green)", url: "https://argoproj.github.io/argo-rollouts/" },
+      { name: "Argo Workflows", role: "Kubernetes-native workflow engine", url: "https://argoproj.github.io/workflows/" },
+    ],
+  },
+  {
+    category: "Observability",
+    color: "#f472b6",
+    items: [
+      { name: "Grafana", role: "Metrics and log dashboards", url: "https://grafana.com" },
+      { name: "Prometheus", role: "Metrics collection and alerting", url: "https://prometheus.io" },
+      { name: "Loki", role: "Log aggregation", url: "https://grafana.com/oss/loki/" },
+      { name: "Tempo", role: "Distributed tracing", url: "https://grafana.com/oss/tempo/" },
+      { name: "Mimir", role: "Long-term Prometheus metrics storage", url: "https://grafana.com/oss/mimir/" },
+      { name: "Alloy", role: "OpenTelemetry-native collector (Grafana Agent successor)", url: "https://grafana.com/oss/alloy/" },
+      { name: "OpenTelemetry Collector", role: "Vendor-neutral telemetry pipeline", url: "https://opentelemetry.io" },
+      { name: "kube-state-metrics", role: "Kubernetes object metrics", url: "https://github.com/kubernetes/kube-state-metrics" },
+    ],
+  },
+  {
+    category: "Security & Policy",
+    color: "#fb923c",
+    items: [
+      { name: "Validating Admission Policy (VAP)", role: "Kubernetes-native admission control with CEL expressions (GA in 1.30)", url: "https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/" },
+      { name: "Kyverno (deprecated v2.0.0)", role: "Deprecated — replaced by Kubernetes VAP + CEL", url: "https://kyverno.io" },
+      { name: "OPA / Gatekeeper (deprecated v2.0.0)", role: "Deprecated — replaced by Kubernetes VAP + CEL", url: "https://www.openpolicyagent.org" },
+      { name: "Falco", role: "Runtime security and threat detection", url: "https://falco.org" },
+      { name: "Trivy Operator", role: "Vulnerability and misconfiguration scanning", url: "https://github.com/aquasecurity/trivy-operator" },
+      { name: "cert-manager", role: "TLS certificate lifecycle management", url: "https://cert-manager.io" },
+      { name: "external-secrets", role: "Sync secrets from external stores (Vault, KMS, etc.)", url: "https://external-secrets.io" },
+    ],
+  },
+  {
+    category: "Networking",
+    color: "#818cf8",
+    items: [
+      { name: "Cilium", role: "eBPF-based CNI, network policies, and service mesh", url: "https://cilium.io" },
+      { name: "external-dns", role: "Automatic DNS record management", url: "https://github.com/kubernetes-sigs/external-dns" },
+      { name: "ingress-nginx", role: "Nginx-based Ingress controller", url: "https://kubernetes.github.io/ingress-nginx/" },
+      { name: "Gateway API", role: "Next-generation Ingress/routing API", url: "https://gateway-api.sigs.k8s.io" },
+    ],
+  },
+  {
+    category: "Storage & Backup",
+    color: "#34d399",
+    items: [
+      { name: "Velero", role: "Cluster backup and disaster recovery", url: "https://velero.io" },
+      { name: "Rook-Ceph", role: "Cloud-native distributed storage (optional)", url: "https://rook.io" },
+    ],
+  },
+  {
+    category: "Secrets",
+    color: "#f472b6",
+    items: [
+      { name: "External Secrets Operator", role: "Sync secrets from external stores into Kubernetes", url: "https://external-secrets.io" },
+      { name: "Akeyless", role: "SaaS secrets management backend", url: "https://www.akeyless.io" },
+      { name: "Infisical", role: "Open-source secrets management backend", url: "https://infisical.com" },
+      { name: "AWS Secrets Manager", role: "AWS-native secrets backend", url: "https://aws.amazon.com/secrets-manager/" },
+      { name: "HashiCorp Vault", role: "Self-hosted secrets management backend (optional)", url: "https://www.vaultproject.io" },
+    ],
+  },
+];
+---
+
+<DocsLayout title="Components" description="Full inventory of Portefaix platform components and their roles.">
+  <p class="doc-eyebrow">// reference / components</p>
+
+  <h1>Platform Components</h1>
+
+  <p>
+    Portefaix assembles a curated set of CNCF and open-source components into a coherent,
+    production-ready platform. Every component is selected for reliability, community backing,
+    and integration with the rest of the stack.
+  </p>
+
+  {components.map((group) => (
+    <>
+      <h2>{group.category}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {group.items.map((item) => (
+            <tr>
+              <td>
+                <a href={item.url} target="_blank" rel="noopener"><strong>{item.name}</strong></a>
+              </td>
+              <td>{item.role}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  ))}
+
+  <h2>CNCF Landscape Alignment</h2>
+
+  <p>
+    Portefaix deliberately chooses components from the
+    <a href="https://landscape.cncf.io" target="_blank" rel="noopener">CNCF landscape</a>
+    where possible, prioritising projects that are either CNCF Graduated or Incubating. This
+    ensures long-term community support, security audits, and interoperability.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Versioning:</strong> Specific component versions and Helm chart versions are tracked
+      in the <a href="https://github.com/portefaix/portefaix-hub" target="_blank" rel="noopener">portefaix-hub</a>
+      repository and updated automatically via Renovate Bot.
+    </p>
+  </div>
+</DocsLayout>

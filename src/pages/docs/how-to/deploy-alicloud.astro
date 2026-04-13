@@ -1,0 +1,164 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Deploy on Alibaba Cloud" description="How to deploy Portefaix on Alibaba Cloud with ACK and OSS-backed Terraform state.">
+  <p class="doc-eyebrow">// how-to guides · alicloud</p>
+
+  <h1>Deploy Portefaix on Alibaba Cloud</h1>
+
+  <p>
+    This guide shows you how to deploy a Portefaix platform on Alibaba Cloud using Alibaba Cloud
+    Container Service for Kubernetes (ACK), OSS for Terraform state storage, and TableStore
+    for state locking.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> a running ACK cluster with Portefaix stacks continuously reconciled
+      by ArgoCD, using RAM roles for workload authentication.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>Alibaba Cloud account with <strong>AdministratorAccess</strong> or equivalent RAM policy</li>
+    <li><code>aliyun</code> CLI configured with your Access Key credentials</li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
+    <li>An Access Key / Secret Key pair for a RAM user with ECS, VPC, CS, OSS, and OTS permissions</li>
+  </ul>
+
+  <h2>1. Configure your environment</h2>
+
+  <p>
+    Add Alibaba Cloud credentials to your Portefaix config file at
+    <code>$HOME/.config/portefaix/portefaix.sh</code>:
+  </p>
+
+  <pre><code>function setup_alicloud() &#123;
+    export ALICLOUD_ACCESS_KEY="LTAI5xxxxxxxxxxxxxxx"
+    export ALICLOUD_SECRET_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    export ALICLOUD_REGION="eu-central-1"
+    export TF_VAR_access_key="$ALICLOUD_ACCESS_KEY"
+    export TF_VAR_secret_key="$ALICLOUD_SECRET_KEY"
+    export TF_VAR_region="$ALICLOUD_REGION"
+&#125;</code></pre>
+
+  <pre><code>. ./portefaix.sh alicloud
+
+export PORTEFAIX_ENV="staging"</code></pre>
+
+  <h2>2. Create Terraform remote state storage</h2>
+
+  <p>
+    Alibaba Cloud uses OSS (Object Storage Service) for Terraform state and TableStore for
+    state locking — the equivalent of S3 + DynamoDB on AWS.
+  </p>
+
+  <pre><code># Create OSS bucket for state
+aliyun oss mb oss://portefaix-tfstate \
+  --region $ALICLOUD_REGION
+
+# Enable versioning
+aliyun oss bucket-versioning \
+  --method put oss://portefaix-tfstate \
+  --status Enabled</code></pre>
+
+  <pre><code># Create TableStore instance for state locking
+aliyun ots CreateInstance \
+  --InstanceName portefaix-tfstate \
+  --Description "Portefaix Terraform state lock" \
+  --RegionId $ALICLOUD_REGION
+
+# Create the lock table
+aliyun ots CreateTable \
+  --InstanceName portefaix-tfstate \
+  --TableMeta.TableName terraform-state-lock \
+  --TableMeta.PrimaryKey.1.Name LockID \
+  --TableMeta.PrimaryKey.1.Type STRING</code></pre>
+
+  <h2>3. Provision the ACK cluster with Terraform</h2>
+
+  <pre><code>cd portefaix-infrastructure/terraform/alicloud/ack
+cp terraform.tfvars.example terraform.tfvars</code></pre>
+
+  <p>Key variables in <code>terraform.tfvars</code>:</p>
+
+  <pre><code>region          = "eu-central-1"
+cluster_name    = "portefaix-staging"
+k8s_version     = "1.30"
+vpc_cidr        = "192.168.0.0/16"
+pod_cidr        = "172.20.0.0/16"
+service_cidr    = "172.21.0.0/20"</code></pre>
+
+  <pre><code>terraform init \
+  -backend-config="bucket=portefaix-tfstate" \
+  -backend-config="prefix=ack/$PORTEFAIX_ENV" \
+  -backend-config="region=$ALICLOUD_REGION" \
+  -backend-config="tablestore_endpoint=https://portefaix-tfstate.$ALICLOUD_REGION.ots.aliyuncs.com" \
+  -backend-config="tablestore_table=terraform-state-lock"
+
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+
+  <h2>4. Fetch cluster credentials</h2>
+
+  <pre><code># Get the cluster ID from Terraform output
+export ACK_CLUSTER_ID="$(terraform output -raw cluster_id)"
+
+# Download kubeconfig
+aliyun cs GET /k8s/$ACK_CLUSTER_ID/user_config \
+  --output json | jq -r '.config' > ~/.kube/portefaix-alicloud
+
+export KUBECONFIG="$HOME/.kube/portefaix-alicloud"
+
+kubectl get nodes</code></pre>
+
+  <h2>5. Configure RAM roles for workloads</h2>
+
+  <p>
+    ACK supports RRSA (RAM Role for Service Account), which binds RAM roles to Kubernetes
+    service accounts — similar to AWS Pod Identity. Enable it on your cluster and verify:
+  </p>
+
+  <pre><code># Enable RRSA on the cluster
+aliyun cs POST /clusters/$ACK_CLUSTER_ID \
+  --body '&#123;"rrsa_config":&#123;"enabled":true&#125;&#125;'
+
+# Verify RRSA is active
+aliyun cs GET /clusters/$ACK_CLUSTER_ID \
+  --output json | jq '.rrsa_config'</code></pre>
+
+  <h2>6. Deploy Portefaix stacks via ArgoCD</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --values portefaix-kubernetes/gitops/argocd/values-alicloud.yaml \
+  --wait
+
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-alicloud-$PORTEFAIX_ENV.yaml
+
+argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
+
+  <h2>Stacks available on Alibaba Cloud</h2>
+
+  <table>
+    <thead>
+      <tr><th>Stack</th><th>Description</th><th>Alibaba Cloud service used</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>OSS for long-term storage</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>KMS / Parameter Store</td></tr>
+      <tr><td>DNS management</td><td>External DNS</td><td>Alibaba Cloud DNS (Alidns)</td></tr>
+      <tr><td>TLS certificates</td><td>cert-manager</td><td>Alidns for DNS-01 challenges</td></tr>
+      <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
+    </tbody>
+  </table>
+</DocsLayout>

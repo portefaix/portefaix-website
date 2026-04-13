@@ -1,0 +1,172 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Platform Architecture" description="Understanding how the Portefaix sub-projects fit together and the reasoning behind each layer.">
+  <p class="doc-eyebrow">// explanation · architecture</p>
+
+  <h1>Platform Architecture</h1>
+
+  <p>
+    This page explains how the Portefaix sub-projects relate to each other, the reasoning behind
+    the layered architecture, and the design decisions that shaped the platform.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Reading this page</strong> will give you a mental model of the whole system.
+      For step-by-step deployment instructions, see the
+      <a href="/docs/tutorials/">Getting Started tutorial</a> or the
+      <a href="/docs/how-to/deploy-gcp/">cloud-specific how-to guides</a>.
+    </p>
+  </div>
+
+  <h2>The four layers</h2>
+
+  <p>
+    Portefaix is structured as four distinct layers. Each layer has a clear responsibility and
+    depends only on the layers below it. This separation makes the platform composable:
+    you can adopt one layer at a time, and replace components within a layer without affecting others.
+  </p>
+
+  <h3>Layer 1 — Cloud infrastructure</h3>
+
+  <p>
+    Managed by <strong>portefaix-infrastructure</strong> (Terraform). This layer creates the
+    cloud resources that everything else runs on: VPCs, managed Kubernetes clusters (GKE, EKS,
+    AKS, Kapsule), IAM roles, object storage buckets, and DNS zones.
+  </p>
+
+  <p>
+    The infrastructure layer is cloud-specific but structurally uniform. Every cloud provider
+    module exposes the same outputs: cluster endpoint, workload identity configuration, and
+    storage locations. This uniformity means higher layers do not need to know which cloud they
+    are running on.
+  </p>
+
+  <h3>Layer 2 — Platform services</h3>
+
+  <p>
+    Managed by <strong>portefaix-kubernetes</strong> (ArgoCD + Helm). This layer installs the
+    services that make Kubernetes production-ready: ingress controllers, certificate managers,
+    secret operators, policy engines, and the observability stack.
+  </p>
+
+  <p>
+    Components in this layer are selected for CNCF maturity and alignment with open standards.
+    They are deployed using Helm charts curated by the <strong>portefaix-hub</strong> project,
+    which pins chart versions and applies Portefaix-specific default values.
+  </p>
+
+  <h3>Layer 3 — Policy and governance</h3>
+
+  <p>
+    Managed by <strong>portefaix-policies</strong> (Kyverno + OPA). Policies run as admission
+    controllers and audit rules inside the cluster. They enforce:
+  </p>
+
+  <ul>
+    <li>Security baselines (no root containers, required labels, pod disruption budgets)</li>
+    <li>Resource governance (CPU/memory limits, namespace quotas)</li>
+    <li>Compliance controls (image registry allowlists, network policy requirements)</li>
+  </ul>
+
+  <p>
+    Policies are stored in Git alongside the rest of the platform configuration and deployed
+    by ArgoCD like any other resource. This means policy changes go through code review and
+    can be tested in staging before being applied to production.
+  </p>
+
+  <h3>Layer 4 — Application workloads</h3>
+
+  <p>
+    Applications deployed by platform consumers. This layer is not managed by Portefaix directly,
+    but Portefaix provides the foundation — GitOps patterns, secret management, ingress, TLS,
+    and observability — that application teams build on.
+  </p>
+
+  <h2>Why Kubernetes as the foundation?</h2>
+
+  <p>
+    Kubernetes was chosen not because it is simple (it is not) but because it provides a
+    universal API surface. The same resource model — Deployments, Services, Ingresses, Custom
+    Resources — works across every cloud provider and on-premises. This is the abstraction that
+    makes Portefaix cloud-agnostic.
+  </p>
+
+  <p>
+    The operator pattern, in particular, is what enables platform automation at scale. Operators
+    like External Secrets Operator and cert-manager turn imperative provisioning tasks (create a
+    certificate, sync a secret) into declarative, reconciled resources.
+  </p>
+
+  <h2>GitOps as the control plane</h2>
+
+  <p>
+    The platform does not have a control plane API or dashboard that operators use to make
+    changes. The control plane <em>is</em> Git. Every change — deploying a new chart version,
+    updating a policy, rotating a secret reference — is a pull request.
+  </p>
+
+  <p>
+    This means the operational model is familiar to any developer: branch, edit, PR, review,
+    merge. There is no separate "ops console" to learn. ArgoCD observes the Git state and
+    makes it real in the cluster.
+  </p>
+
+  <h2>Observability by default</h2>
+
+  <p>
+    Every component in the platform is instrumented before it is deployed. The observability
+    stack (Prometheus, Grafana, Loki, Tempo) is installed in wave 3 of the ArgoCD sync order —
+    before application workloads — so metrics, logs, and traces are available from the first
+    deployment.
+  </p>
+
+  <p>
+    <strong>portefaix-kubernetes</strong> includes pre-built Grafana dashboards for every
+    platform component. These dashboards use standardised labels and follow the
+    <a href="https://grafana.com/docs/grafana/latest/dashboards/use-dashboards/" target="_blank" rel="noopener">
+    Grafana dashboard conventions</a> so they compose cleanly with custom application dashboards.
+  </p>
+
+  <h2>Design decisions</h2>
+
+  <h3>Helm over Kustomize</h3>
+
+  <p>
+    Portefaix uses Helm for all components because Helm's values system provides a clean
+    interface for cloud-specific and environment-specific overrides. A single chart can be
+    deployed with different values to GCP staging, AWS production, and a local kind cluster.
+    Kustomize patches are harder to review and easier to misapply.
+  </p>
+
+  <h3>ArgoCD over FluxCD</h3>
+
+  <p>
+    Both tools implement GitOps correctly. ArgoCD was chosen because its ApplicationSet
+    controller makes multi-cluster management declarative, and its UI provides a valuable
+    operational view of sync status across all managed applications. FluxCD's image automation
+    is more sophisticated, but Portefaix handles image versioning at the chart values layer.
+  </p>
+
+  <h3>Kyverno over OPA/Gatekeeper</h3>
+
+  <p>
+    Kyverno uses native Kubernetes resources (YAML policies) rather than a separate policy
+    language (Rego). This lowers the barrier for platform teams to write and review policies.
+    OPA/Rego is still available and used for more complex rule logic via the
+    <code>portefaix-policies</code> project.
+  </p>
+
+  <h2>Further reading</h2>
+
+  <ul>
+    <li><a href="/docs/explanation/gitops-principles/">GitOps Principles</a> — the operational model underpinning the platform</li>
+    <li><a href="/docs/reference/components/">Components Reference</a> — complete inventory of platform components</li>
+    <li><a href="/docs/tutorials/">Your First Cluster</a> — build the architecture hands-on</li>
+  </ul>
+</DocsLayout>

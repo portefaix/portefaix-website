@@ -1,0 +1,140 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Bootstrap ArgoCD" description="How to install and configure ArgoCD as the GitOps engine for Portefaix.">
+  <p class="doc-eyebrow">// how-to guides · gitops</p>
+
+  <h1>Bootstrap ArgoCD</h1>
+
+  <p>
+    This guide shows you how to install ArgoCD, connect it to your Git repository, and deploy
+    the Portefaix app-of-apps pattern to manage all platform stacks.
+  </p>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Goal:</strong> ArgoCD running in your cluster, connected to your forked
+      <code>portefaix-kubernetes</code> repository, managing the full set of Portefaix stacks.
+    </p>
+  </div>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>A running Kubernetes cluster with <code>kubectl</code> access</li>
+    <li>Helm ≥ 3.12 installed</li>
+    <li>ArgoCD CLI (<code>argocd</code>) installed</li>
+    <li>Your fork of <code>portefaix-kubernetes</code> on GitHub/GitLab</li>
+  </ul>
+
+  <h2>1. Add the Argo Helm repository</h2>
+
+  <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update</code></pre>
+
+  <h2>2. Install ArgoCD</h2>
+
+  <p>
+    Portefaix provides per-cloud <code>values-*.yaml</code> files that configure ArgoCD with
+    appropriate resource limits, OIDC integration, and Helm plugin settings.
+  </p>
+
+  <pre><code>kubectl create namespace argocd
+
+# Replace CLOUD with: gcp | aws | azure | scaleway
+helm install argocd argo/argo-cd \
+  --namespace argocd \
+  --version 7.x.x \
+  --values portefaix-kubernetes/gitops/argocd/values-CLOUD.yaml \
+  --wait</code></pre>
+
+  <p>Verify all pods are running:</p>
+
+  <pre><code>kubectl get pods -n argocd</code></pre>
+
+  <h2>3. Access the ArgoCD UI</h2>
+
+  <pre><code># Port-forward the server
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+# Get the initial admin password
+argocd admin initial-password -n argocd</code></pre>
+
+  <p>Visit <code>https://localhost:8080</code> and log in with <code>admin</code> and the password above.</p>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>Change the default password</strong> after first login:
+      <code>argocd account update-password</code>
+    </p>
+  </div>
+
+  <h2>4. Log in with the CLI</h2>
+
+  <pre><code>argocd login localhost:8080 \
+  --username admin \
+  --password "$(argocd admin initial-password -n argocd | head -1)" \
+  --insecure</code></pre>
+
+  <h2>5. Connect your Git repository</h2>
+
+  <pre><code>argocd repo add https://github.com/YOUR_ORG/portefaix-kubernetes \
+  --username git \
+  --password "YOUR_GITHUB_PAT"</code></pre>
+
+  <p>For SSH authentication:</p>
+
+  <pre><code>argocd repo add git@github.com:YOUR_ORG/portefaix-kubernetes \
+  --ssh-private-key-path ~/.ssh/id_ed25519</code></pre>
+
+  <h2>6. Deploy the app-of-apps</h2>
+
+  <p>
+    The app-of-apps pattern uses a single ArgoCD Application that manages all other Applications.
+    Apply the bootstrap manifest for your cloud and environment:
+  </p>
+
+  <pre><code>kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-CLOUD-ENV.yaml</code></pre>
+
+  <p>Monitor the initial sync:</p>
+
+  <pre><code>argocd app list
+argocd app get portefaix-bootstrap
+argocd app sync portefaix-bootstrap --prune</code></pre>
+
+  <h2>Stack deployment order</h2>
+
+  <p>
+    ArgoCD deploys stacks in waves defined by the <code>argocd.argoproj.io/sync-wave</code>
+    annotation. The order ensures dependencies are ready before dependents:
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Wave</th><th>Stacks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>0</td><td>cert-manager, external-secrets-operator</td></tr>
+      <tr><td>1</td><td>ingress-nginx, external-dns</td></tr>
+      <tr><td>2</td><td>kyverno, kyverno-policies</td></tr>
+      <tr><td>3</td><td>kube-prometheus-stack, loki, tempo</td></tr>
+      <tr><td>4</td><td>Application stacks</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Troubleshooting</h2>
+
+  <p><strong>App stuck in <code>OutOfSync</code>:</strong></p>
+  <pre><code>argocd app diff portefaix-bootstrap
+argocd app sync portefaix-bootstrap --prune --force</code></pre>
+
+  <p><strong>Webhook not receiving GitHub events:</strong> ensure your ArgoCD server is reachable
+  from GitHub. Configure the webhook secret in <code>argocd-secret</code>:</p>
+  <pre><code>kubectl patch secret argocd-secret -n argocd \
+  --type merge \
+  -p '&#123;"stringData":&#123;"webhook.github.secret":"YOUR_WEBHOOK_SECRET"&#125;&#125;'</code></pre>
+</DocsLayout>

@@ -1,0 +1,179 @@
+---
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+
+const e = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const codeVars = e(`# infrastructure/aws/<env>/terraform.tfvars
+aws_region  = "eu-west-1"
+environment = "production"
+cluster_name = "portefaix-production"
+organization = "my-org"`);
+
+const codeInit = e(`cd infrastructure/aws/production
+
+terraform init \\
+  -backend-config="bucket=my-tfstate-bucket" \\
+  -backend-config="key=portefaix/aws/production/terraform.tfstate" \\
+  -backend-config="region=eu-west-1"
+
+terraform plan -out=tfplan
+terraform apply tfplan`);
+
+const codeKubeconfig = e(`aws eks update-kubeconfig \\
+  --name portefaix-production \\
+  --region eu-west-1`);
+
+const codeIRSA = e(`# EKS Pod Identity association (replaces IRSA / OIDC thumbprint)
+resource "aws_eks_pod_identity_association" "external_dns" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "external-dns"
+  service_account = "external-dns"
+  role_arn        = module.external_dns_role.iam_role_arn
+}
+
+# EKS cluster — Pod Identity enabled, IRSA disabled
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.6"
+
+  enable_pod_identity             = true
+  create_pod_identity_association = true
+  enable_irsa                     = false
+}`);
+
+const codeInspec = e(`# Run InSpec tests against AWS
+inspec exec portefaix-inspec-aws \\
+  -t aws:// \\
+  --input region=eu-west-1 \\
+  --reporter cli junit:reports/inspec-aws.xml`);
+---
+
+<DocsLayout title="AWS" description="Deploy and manage Portefaix on Amazon Web Services.">
+  <p class="doc-eyebrow">// guides / infrastructure / aws</p>
+
+  <h1>Amazon Web Services</h1>
+
+  <p>
+    Portefaix deploys a production-ready EKS cluster on AWS with full supporting infrastructure:
+    VPC with private subnets, IAM Roles for Service Accounts (IRSA), KMS encryption, Route53 DNS,
+    ECR for container images, and S3 for Terraform state and backups.
+  </p>
+
+  <h2>Architecture</h2>
+
+  <div class="diagram-wrapper" style="margin: 1.5rem 0; border: 1px solid rgba(0,229,176,0.15); border-radius: 4px; overflow: hidden; background: #071221;">
+    <div style="padding: 0.5rem 1rem; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(0,229,176,0.1); display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-family: 'Fira Code', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #00bcd4; opacity: 0.8;">// infrastructure blueprint · eu-west-1</span>
+    </div>
+    <a href="/diagrams/architecture-aws.svg" target="_blank" rel="noopener" title="Open full-size architecture diagram" style="display: block;">
+      <img src="/diagrams/architecture-aws.svg" alt="Portefaix AWS Infrastructure Architecture — Blueprint diagram showing VPC, EKS, observability stack, and AWS services" style="width: 100%; height: auto; display: block;" loading="lazy"/>
+    </a>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>AWS Service</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Kubernetes cluster</td>
+        <td>EKS</td>
+        <td>Container orchestration</td>
+      </tr>
+      <tr>
+        <td>Networking</td>
+        <td>VPC, Subnets, NAT Gateway</td>
+        <td>Private cluster networking</td>
+      </tr>
+      <tr>
+        <td>Identity</td>
+        <td>IRSA, IAM Roles</td>
+        <td>Pod-level AWS authentication</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>AWS KMS</td>
+        <td>External Secrets Operator with AWS Secrets Manager</td>
+      </tr>
+      <tr>
+        <td>DNS</td>
+        <td>Route53</td>
+        <td>External-DNS managed records</td>
+      </tr>
+      <tr>
+        <td>Registry</td>
+        <td>ECR</td>
+        <td>Container image storage</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>S3</td>
+        <td>Terraform state, Velero backups, Loki</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>AWS account with appropriate permissions</li>
+    <li>AWS CLI configured: <code>aws configure</code></li>
+    <li>Terraform ≥ 1.5</li>
+    <li><code>kubectl</code>, <code>helm</code>, and <code>eksctl</code></li>
+  </ul>
+
+  <h2>Deploying Infrastructure</h2>
+
+  <h3>1. Configure Variables</h3>
+  <pre><code set:html={codeVars}></code></pre>
+
+  <h3>2. Initialize and Apply</h3>
+  <pre><code set:html={codeInit}></code></pre>
+
+  <h3>3. Configure kubectl</h3>
+  <pre><code set:html={codeKubeconfig}></code></pre>
+
+  <h2>EKS Pod Identity</h2>
+
+  <p>
+    Portefaix uses <strong>EKS Pod Identity</strong> (the modern successor to IRSA) to grant Kubernetes
+    workloads fine-grained access to AWS services without static credentials. Each platform component
+    (external-dns, Karpenter, Loki, ESO, etc.) gets its own IAM role bound to a Kubernetes
+    ServiceAccount — no OIDC thumbprint management required.
+  </p>
+
+  <pre><code set:html={codeIRSA}></code></pre>
+
+  <h2>Multi-Account Organisation</h2>
+
+  <p>
+    For production deployments, Portefaix recommends an AWS Organisation structure with separate
+    accounts for each environment:
+  </p>
+
+  <ul>
+    <li><strong>Management</strong> — root account, AWS Organisation, SCPs</li>
+    <li><strong>Security</strong> — centralised logging, GuardDuty, Security Hub</li>
+    <li><strong>Shared Services</strong> — ECR, Transit Gateway, shared DNS</li>
+    <li><strong>Production</strong> — production EKS workloads</li>
+    <li><strong>Staging</strong> — staging EKS workloads</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <p>
+      <strong>Tip:</strong> Use AWS Control Tower to automate account vending and enforce guardrails
+      via SCPs across the Organisation.
+    </p>
+  </div>
+
+  <h2>Compliance Testing</h2>
+
+  <pre><code set:html={codeInspec}></code></pre>
+</DocsLayout>
