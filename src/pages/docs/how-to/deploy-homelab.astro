@@ -5,22 +5,32 @@
 import DocsLayout from "../../../layouts/DocsLayout.astro";
 ---
 
-<DocsLayout title="Deploy on Homelab" description="How to deploy Portefaix on a Raspberry Pi homelab cluster using k3s, Cilium, and Cloudflare R2.">
+<DocsLayout title="Deploy on Homelab" description="How to deploy Portefaix on a Raspberry Pi homelab cluster using Talos Linux, talhelper, Cilium, and Cloudflare R2.">
   <p class="doc-eyebrow">// how-to guides · homelab</p>
 
   <h1>Deploy Portefaix on Homelab</h1>
 
   <p>
-    This guide shows you how to deploy a Portefaix platform on a Raspberry Pi cluster using k3s
-    as the Kubernetes distribution, Cilium as the CNI, Tailscale for secure networking, and
-    Cloudflare R2 for Terraform state storage.
+    This guide shows you how to deploy a Portefaix platform on a Raspberry Pi cluster using
+    <strong>Talos Linux</strong> as the immutable OS, <strong>talhelper</strong> for declarative
+    cluster configuration, <strong>Cilium</strong> as the CNI, <strong>SOPS + age</strong> for
+    secret encryption, and <strong>Cloudflare R2</strong> for Terraform state storage.
   </p>
 
   <div class="callout callout-info">
     <p>
-      <strong>Goal:</strong> a multi-node k3s cluster on Raspberry Pi hardware, with Cilium
-      providing cluster networking, Tailscale providing a secure overlay network, and Portefaix
-      stacks reconciled by ArgoCD.
+      <strong>Goal:</strong> a multi-node Talos cluster on Raspberry Pi hardware, with Cilium
+      providing cluster networking, secrets encrypted at rest with SOPS, and Portefaix stacks
+      reconciled by ArgoCD.
+    </p>
+  </div>
+
+  <div class="callout callout-tip">
+    <p>
+      <strong>Why Talos?</strong> Unlike conventional Linux distributions, Talos has no SSH daemon,
+      no package manager, and no shell. Every node is configured exclusively through its API via
+      <code>talosctl</code>. The result is a minimal, read-only OS surface that is far harder to
+      misconfigure or compromise than a general-purpose Linux install.
     </p>
   </div>
 
@@ -29,126 +39,269 @@ import DocsLayout from "../../../layouts/DocsLayout.astro";
   <ul>
     <li>2+ Raspberry Pi 4 or 5 boards (8 GB RAM recommended for the control plane)</li>
     <li>SD cards or USB SSDs (32 GB+ per node)</li>
-    <li>Ansible installed on your workstation</li>
-    <li><code>k3sup</code> CLI installed (<code>curl -sLS https://get.k3sup.dev | sh</code>)</li>
-    <li>Tailscale account and auth key</li>
+    <li>
+      <code>talosctl</code> installed —
+      <code>curl -sL https://talos.dev/install | sh</code>
+    </li>
+    <li>
+      <code>talhelper</code> installed —
+      <code>curl -fsSL https://i.jpillora.com/budimanjojo/talhelper! | bash</code>
+    </li>
+    <li>
+      <code>age</code> and <code>sops</code> installed — available via Homebrew or your system
+      package manager
+    </li>
     <li>Cloudflare account with R2 enabled and an API token</li>
+    <li>Terraform ≥ 1.5, kubectl, and Helm installed locally</li>
   </ul>
 
-  <h2>1. Prepare the SD cards</h2>
+  <h2>1. Set up SOPS + age encryption</h2>
 
   <p>
-    Flash Ubuntu 24.04 LTS (64-bit) onto each SD card. The Portefaix homelab script automates
-    hostname injection and SSH key setup:
+    All secrets in the Portefaix homelab repository are encrypted with
+    <a href="https://github.com/FiloSottile/age" target="_blank" rel="noopener">age</a> via
+    <a href="https://github.com/getsops/sops" target="_blank" rel="noopener">SOPS</a>.
+    Generate a key pair and store the private key securely:
   </p>
 
-  <pre><code># Wipe and flash each card (replace /dev/mmcblk0 with your device)
-sudo dd if=/dev/zero of=/dev/mmcblk0 conv=noerror status=progress
+  <pre><code># Generate a new age key pair
+age-keygen -o $HOME/.config/portefaix/portefaix.homelab.txt
 
-sudo ./hack/scripts/sdcard.sh &lt;hostname&gt; /dev/mmcblk0</code></pre>
+# The output will show the public key:
+# Public key: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-  <p>Enable SSH and set hostnames before first boot:</p>
-
-  <pre><code>make -f hack/build/k3s.mk sdcard-mount ENV=homelab
-sudo touch /mnt/portefaix/boot/ssh
-echo portefaix-1 | sudo tee /mnt/portefaix/root/etc/hostname
-make -f hack/build/k3s.mk sdcard-unmount ENV=homelab</code></pre>
-
-  <p>Boot each Pi and copy your SSH key:</p>
-
-  <pre><code>ssh-copy-id -i ~/.ssh/id_ed25519.pub pi@192.168.0.61
-ssh-copy-id -i ~/.ssh/id_ed25519.pub pi@192.168.0.208
-# ... repeat for each node</code></pre>
-
-  <h2>2. Configure nodes with Ansible</h2>
+# Export the public key for use in .sops.yaml
+age-keygen -y $HOME/.config/portefaix/portefaix.homelab.txt</code></pre>
 
   <p>
-    The Ansible playbook installs base packages, disables swap, configures kernel parameters
-    for Kubernetes, and sets up container runtime prerequisites on all nodes:
+    Add a <code>.sops.yaml</code> at the root of the repository to tell SOPS which key to use for
+    encryption. Replace the <code>age1...</code> value with your actual public key:
   </p>
 
-  <pre><code>cd portefaix-infrastructure/ansible/k3s/machines
-
-# Install Ansible collections
-ansible-galaxy install -r requirements.yml
-
-# Run the machine preparation playbook
-ansible-playbook -i inventories/homelab/hosts.ini site.yml \
-  --diff \
-  -e "env=homelab"</code></pre>
-
-  <h2>3. Create the k3s cluster with k3sup</h2>
+  <pre><code>creation_rules:
+  - path_regex: .*\.yaml$
+    age: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
 
   <p>
-    k3sup uses SSH to install k3s on each node. Create the control plane first, then join
-    the worker nodes. Cilium replaces the default Flannel CNI — pass <code>--flannel-backend=none</code>
-    to disable it:
+    Set the environment variable so <code>talosctl</code> and SOPS can find your private key:
   </p>
 
-  <pre><code>export SERVER_IP="192.168.0.61"    # control plane IP
-export EXTERNAL_IP="100.79.205.64" # Tailscale IP of control plane
+  <pre><code>export SOPS_AGE_KEY_FILE="$HOME/.config/portefaix/portefaix.homelab.txt"</code></pre>
 
-# Bootstrap the control plane
-k3sup install \
-  --ip "$SERVER_IP" \
-  --user pi \
-  --k3s-extra-args "--disable traefik --disable servicelb --flannel-backend=none --disable-network-policy" \
-  --merge --local-path ~/.kube/config \
-  --context portefaix-homelab</code></pre>
+  <h2>2. Build a custom Talos image for Raspberry Pi</h2>
 
-  <p>Join each worker node:</p>
+  <p>
+    Talos Linux requires hardware-specific extensions for Raspberry Pi. Use the
+    <a href="https://factory.talos.dev" target="_blank" rel="noopener">Talos Image Factory</a>
+    to build a customized image with the correct firmware extension:
+  </p>
 
-  <pre><code># Worker node 1
-k3sup join \
-  --ip 192.168.0.208 \
-  --server-ip "$SERVER_IP" \
-  --user pi
+  <ul>
+    <li>Raspberry Pi 4: select the <code>siderolabs/rpi4-firmware</code> extension</li>
+    <li>Raspberry Pi 5: select the <code>siderolabs/rpi5-firmware</code> extension</li>
+  </ul>
+
+  <p>
+    The factory produces a schematic ID. Download the metal disk image for your board:
+  </p>
+
+  <pre><code># Example: Raspberry Pi 4, Talos v1.9.x
+# Replace SCHEMATIC_ID with the ID from factory.talos.dev
+SCHEMATIC_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+TALOS_VERSION="v1.9.5"
+
+curl -LO "https://factory.talos.dev/image/$SCHEMATIC_ID/$TALOS_VERSION/metal-arm64.raw.xz"
+
+# Flash each SD card or SSD (replace /dev/sdX with your device)
+xz -d -c metal-arm64.raw.xz | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync</code></pre>
+
+  <p>
+    Boot each board from the flashed media. Talos will start in maintenance mode and listen for
+    configuration on port 50000. Note the IP addresses assigned to each node (check your router
+    DHCP table or use <code>nmap</code>).
+  </p>
+
+  <h2>3. Inspect available disks (optional)</h2>
+
+  <p>
+    Before generating configuration, confirm the disk path Talos should install to. While the
+    node is in maintenance mode, query it without authentication:
+  </p>
+
+  <pre><code>talosctl disks \
+  --nodes 192.168.0.61 \
+  --endpoints 192.168.0.61 \
+  --insecure</code></pre>
+
+  <p>
+    Update <code>installDisk</code> in <code>talconfig.yaml</code> with the path shown (typically
+    <code>/dev/mmcblk0</code> for SD cards or <code>/dev/sda</code> for USB SSDs).
+  </p>
+
+  <h2>4. Generate cluster secrets</h2>
+
+  <p>
+    talhelper generates a <code>talsecret.sops.yaml</code> containing Talos bootstrap secrets
+    (CA certificates, join tokens, etc.) and encrypts it immediately with SOPS:
+  </p>
+
+  <pre><code>cd portefaix-infrastructure/talos/homelab
+
+# Generate Talos cluster secrets
+talhelper gensecret > talsecret.sops.yaml
+
+# Encrypt in-place using your .sops.yaml configuration
+sops --encrypt --in-place talsecret.sops.yaml</code></pre>
+
+  <div class="callout callout-warn">
+    <p>
+      <strong>Never commit an unencrypted <code>talsecret.sops.yaml</code>.</strong> Verify
+      encryption before committing: <code>sops --decrypt talsecret.sops.yaml</code> should require
+      your age private key. The encrypted file is safe to commit.
+    </p>
+  </div>
+
+  <h2>5. Generate per-node Talos configurations</h2>
+
+  <p>
+    talhelper reads <code>talconfig.yaml</code> (your cluster topology) and
+    <code>talsecret.sops.yaml</code> (the encrypted secrets) to produce a machine config file for
+    each node:
+  </p>
+
+  <pre><code>talhelper genconfig
+
+# Output: clusterconfig/
+#   portefaix-homelab-controlplane.yaml
+#   portefaix-homelab-worker-1.yaml
+#   portefaix-homelab-worker-2.yaml
+#   talosconfig</code></pre>
+
+  <p>
+    Copy the generated <code>talosconfig</code> to the default location so
+    <code>talosctl</code> finds it automatically:
+  </p>
+
+  <pre><code>mkdir -p $HOME/.talos
+cp clusterconfig/talosconfig $HOME/.talos/config</code></pre>
+
+  <h2>6. Apply configuration to each node</h2>
+
+  <p>
+    Push the machine configuration to each node while it is in maintenance mode. The node will
+    apply the config and reboot into Talos:
+  </p>
+
+  <pre><code># Control plane node
+talosctl apply-config \
+  --nodes 192.168.0.61 \
+  --endpoints 192.168.0.61 \
+  --insecure \
+  --file clusterconfig/portefaix-homelab-controlplane.yaml
+
+# Worker node 1
+talosctl apply-config \
+  --nodes 192.168.0.208 \
+  --endpoints 192.168.0.61 \
+  --insecure \
+  --file clusterconfig/portefaix-homelab-worker-1.yaml
 
 # Worker node 2
-k3sup join \
-  --ip 192.168.0.116 \
-  --server-ip "$SERVER_IP" \
-  --user pi</code></pre>
+talosctl apply-config \
+  --nodes 192.168.0.116 \
+  --endpoints 192.168.0.61 \
+  --insecure \
+  --file clusterconfig/portefaix-homelab-worker-2.yaml</code></pre>
 
-  <h2>4. Install Cilium</h2>
+  <p>Wait for the nodes to reboot (~2 minutes), then verify they are reachable:</p>
+
+  <pre><code>talosctl --nodes 192.168.0.61 version</code></pre>
+
+  <h2>7. Bootstrap the Talos cluster</h2>
 
   <p>
-    Nodes will be in <code>NotReady</code> state until a CNI is installed. Install Cilium with
-    Hubble enabled for network observability:
+    Bootstrap must be run <strong>once</strong> on the control plane node. This initialises etcd
+    and makes the API server available:
   </p>
 
-  <pre><code>kubectl config use-context portefaix-homelab
+  <pre><code>talosctl bootstrap --nodes 192.168.0.61</code></pre>
 
-# Install Cilium CRDs first
-make bootstrap-crds ENV=homelab CLOUD=k3s
+  <p>Monitor the bootstrap progress:</p>
 
-# Install Cilium
-make bootstrap-cilium ENV=homelab CLOUD=k3s</code></pre>
+  <pre><code>talosctl --nodes 192.168.0.61 dashboard
 
-  <p>Verify Cilium is healthy:</p>
+# Or watch services directly
+talosctl --nodes 192.168.0.61 services
+NODE           SERVICE    STATE     HEALTH   LAST CHANGE
+192.168.0.61   apid       Running   OK       35s ago
+192.168.0.61   containerd Running   OK       38s ago
+192.168.0.61   etcd       Running   OK       12s ago
+192.168.0.61   kubelet    Running   OK       8s ago</code></pre>
+
+  <h2>8. Fetch cluster credentials</h2>
+
+  <pre><code>talosctl kubeconfig \
+  --nodes 192.168.0.61 \
+  --endpoints 192.168.0.61 \
+  $HOME/.kube/portefaix-homelab
+
+export KUBECONFIG="$HOME/.kube/portefaix-homelab"
+
+kubectl get nodes
+NAME            STATUS     ROLES           AGE   VERSION
+portefaix       NotReady   control-plane   2m    v1.31.4
+portefaix-1     NotReady   &lt;none&gt;          90s   v1.31.4
+portefaix-2     NotReady   &lt;none&gt;          85s   v1.31.4</code></pre>
+
+  <p>
+    <code>NotReady</code> is expected — no CNI has been installed yet. Cilium is installed in the
+    next step.
+  </p>
+
+  <h2>9. Install Cilium</h2>
+
+  <p>
+    Install Cilium with Hubble enabled for network observability. Talos requires specific
+    mount and kernel parameters — pass them via Helm values:
+  </p>
+
+  <pre><code>helm repo add cilium https://helm.cilium.io/
+helm repo update
+
+helm install cilium cilium/cilium \
+  --namespace kube-system \
+  --set ipam.mode=kubernetes \
+  --set kubeProxyReplacement=true \
+  --set securityContext.capabilities.ciliumAgent="&#123;CHOWN,KILL,NET_ADMIN,NET_RAW,IPC_LOCK,SYS_ADMIN,SYS_RESOURCE,DAC_OVERRIDE,FOWNER,SETGID,SETUID&#125;" \
+  --set securityContext.capabilities.cleanCiliumState="&#123;NET_ADMIN,SYS_ADMIN,SYS_RESOURCE&#125;" \
+  --set cgroup.autoMount.enabled=false \
+  --set cgroup.hostRoot=/sys/fs/cgroup \
+  --set hubble.relay.enabled=true \
+  --set hubble.ui.enabled=true \
+  --wait</code></pre>
+
+  <p>Verify Cilium is healthy and nodes are Ready:</p>
 
   <pre><code>cilium status
 
 kubectl get nodes -o wide
-NAME          STATUS   ROLES                  AGE     VERSION        INTERNAL-IP     EXTERNAL-IP
-portefaix     Ready    control-plane,master   3h37m   v1.30.2+k3s1   192.168.0.61    100.79.205.64
-portefaix-1   Ready    worker                 3h22m   v1.30.2+k3s1   192.168.0.208   100.115.34.57
-portefaix-2   Ready    worker                 3h20m   v1.30.2+k3s1   192.168.0.116   100.126.100.42
-portefaix-6   Ready    infra,worker           3h21m   v1.30.2+k3s1   192.168.0.233   100.111.218.32
-portefaix-7   Ready    infra,worker           3h18m   v1.30.2+k3s1   192.168.0.250   100.86.220.99</code></pre>
+NAME          STATUS   ROLES           AGE     VERSION   INTERNAL-IP     EXTERNAL-IP
+portefaix     Ready    control-plane   5m      v1.31.4   192.168.0.61    &lt;none&gt;
+portefaix-1   Ready    &lt;none&gt;          4m30s   v1.31.4   192.168.0.208   &lt;none&gt;
+portefaix-2   Ready    &lt;none&gt;          4m25s   v1.31.4   192.168.0.116   &lt;none&gt;</code></pre>
 
-  <h2>5. Label nodes by role</h2>
+  <h2>10. Label nodes by role</h2>
 
   <p>
-    Portefaix uses node labels to schedule platform components on appropriate hardware. Label
-    each worker node according to its purpose:
+    Portefaix uses node labels to schedule platform components on appropriate hardware:
   </p>
 
-  <pre><code># Mark all workers
+  <pre><code># Application / low-cost workload nodes
 kubectl label node portefaix-1 portefaix-2 \
   node-role.kubernetes.io/worker=true \
   node-role.kubernetes.io/lowcost=true
 
+# Infrastructure nodes (ingress, monitoring, cert-manager)
 kubectl label node portefaix-6 portefaix-7 \
   node-role.kubernetes.io/worker=true \
   node-role.kubernetes.io/infra=true</code></pre>
@@ -163,11 +316,11 @@ kubectl label node portefaix-6 portefaix-7 \
     </tbody>
   </table>
 
-  <h2>6. Configure Cloudflare R2 for Terraform state</h2>
+  <h2>11. Configure Cloudflare R2 for Terraform state</h2>
 
   <p>
-    Cloudflare R2 stores Terraform state files and S3-compatible storage for observability
-    components. Set up credentials in your Portefaix config file:
+    Cloudflare R2 stores Terraform state files and provides S3-compatible object storage for
+    observability components. Configure credentials in your Portefaix config:
   </p>
 
   <pre><code>function setup_cloudflare() &#123;
@@ -176,16 +329,21 @@ kubectl label node portefaix-6 portefaix-7 \
     export AWS_SECRET_ACCESS_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 &#125;</code></pre>
 
-  <pre><code>. ./portefaix.sh k3s
+  <pre><code>. ./portefaix.sh talos
 
 # Create the R2 bucket for Terraform state
 aws s3api create-bucket \
   --bucket portefaix-homelab-tfstates \
+  --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com"
+
+# Create observability storage bucket
+aws s3api create-bucket \
+  --bucket portefaix-homelab-observability \
   --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com"</code></pre>
 
-  <h2>7. Provision DNS and observability storage with Terraform</h2>
+  <h2>12. Provision DNS and observability storage with Terraform</h2>
 
-  <pre><code>cd portefaix-infrastructure/terraform/k3s/dns
+  <pre><code>cd portefaix-infrastructure/terraform/talos/dns
 terraform init \
   -backend-config="bucket=portefaix-homelab-tfstates" \
   -backend-config="key=dns/homelab.tfstate" \
@@ -193,7 +351,7 @@ terraform init \
   -backend-config="region=auto"
 terraform apply</code></pre>
 
-  <pre><code>cd portefaix-infrastructure/terraform/k3s/observability
+  <pre><code>cd portefaix-infrastructure/terraform/talos/observability
 terraform init \
   -backend-config="bucket=portefaix-homelab-tfstates" \
   -backend-config="key=observability/homelab.tfstate" \
@@ -201,17 +359,17 @@ terraform init \
   -backend-config="region=auto"
 terraform apply</code></pre>
 
-  <h2>8. Deploy Portefaix stacks via ArgoCD</h2>
+  <h2>13. Deploy Portefaix stacks via ArgoCD</h2>
 
   <pre><code>helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 
 helm install argocd argo/argo-cd \
   --namespace argocd --create-namespace \
-  --values portefaix-kubernetes/gitops/argocd/values-k3s.yaml \
+  --values portefaix-kubernetes/gitops/argocd/values-talos.yaml \
   --wait
 
-kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-k3s-homelab.yaml
+kubectl apply -f portefaix-kubernetes/gitops/argocd/bootstrap/app-of-apps-talos-homelab.yaml
 
 argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
 
@@ -223,32 +381,39 @@ argocd app wait portefaix-bootstrap --health --timeout 600</code></pre>
     </thead>
     <tbody>
       <tr><td>Networking</td><td>Cilium + Hubble</td><td>In-cluster eBPF-based CNI</td></tr>
-      <tr><td>Overlay network</td><td>Tailscale</td><td>Secure mesh between nodes and workstation</td></tr>
       <tr><td>Observability</td><td>Prometheus, Grafana, Loki, Tempo</td><td>Cloudflare R2 for long-term storage</td></tr>
       <tr><td>DNS management</td><td>External DNS</td><td>Cloudflare DNS</td></tr>
       <tr><td>TLS certificates</td><td>cert-manager</td><td>Cloudflare DNS for DNS-01 challenges</td></tr>
+      <tr><td>Secret management</td><td>External Secrets Operator</td><td>SOPS-encrypted secrets in Git</td></tr>
       <tr><td>Policy enforcement</td><td>Kyverno</td><td>—</td></tr>
     </tbody>
   </table>
 
-  <div class="callout callout-tip">
-    <p>
-      <strong>Tailscale for remote access:</strong> with Tailscale installed on all Pi nodes and
-      your workstation, you can reach <code>kubectl</code>, ArgoCD, and Grafana from anywhere
-      without port-forwarding or exposing services publicly. The Tailscale subnet router feature
-      allows you to reach the entire <code>192.168.0.0/24</code> home network over the VPN.
-    </p>
-  </div>
-
   <h2>Troubleshooting</h2>
 
-  <h3>Nodes stuck in NotReady after k3sup join</h3>
+  <h3>Node stuck in maintenance mode after applying config</h3>
 
-  <p>This is expected — Cilium must be installed before nodes become Ready. After running
-  <code>make bootstrap-cilium</code>, wait 60 seconds and check again:</p>
+  <p>
+    If <code>talosctl version</code> times out after applying config, the node may not have
+    rebooted cleanly. Check the node is accessible and in the correct boot mode:
+  </p>
 
-  <pre><code>kubectl get nodes
-kubectl -n kube-system get pods -l k8s-app=cilium</code></pre>
+  <pre><code># Query node state without authentication (maintenance mode only)
+talosctl --nodes 192.168.0.61 --insecure get machinestatus
+
+# Force reboot if needed
+talosctl --nodes 192.168.0.61 reboot</code></pre>
+
+  <h3>Nodes stuck in NotReady after Cilium install</h3>
+
+  <p>Check that Cilium pods started correctly and that the kernel extensions in the Talos image
+  include the required eBPF capabilities:</p>
+
+  <pre><code>kubectl -n kube-system get pods -l k8s-app=cilium
+kubectl -n kube-system logs -l k8s-app=cilium --tail=50
+
+# Verify Talos has the correct extensions installed
+talosctl --nodes 192.168.0.61 get extensions</code></pre>
 
   <h3>R2 endpoint authentication errors</h3>
 
@@ -258,11 +423,17 @@ aws s3 ls \
 
   <p>Ensure your R2 API token has <strong>Object Read &amp; Write</strong> permissions on the target bucket.</p>
 
-  <h3>k3s node not joining</h3>
+  <h3>SOPS decryption fails</h3>
 
-  <pre><code># Check k3s agent logs on the failing node
-ssh pi@192.168.0.208 "journalctl -u k3s-agent -f"
+  <pre><code># Verify your age key is set correctly
+echo $SOPS_AGE_KEY_FILE
+cat $SOPS_AGE_KEY_FILE | head -2
 
-# Verify the server token matches
-ssh pi@192.168.0.61 "sudo cat /var/lib/rancher/k3s/server/node-token"</code></pre>
+# Test decryption
+sops --decrypt talsecret.sops.yaml | head -5</code></pre>
+
+  <p>
+    If you have multiple age keys, ensure the public key in <code>.sops.yaml</code> matches
+    the one in your key file.
+  </p>
 </DocsLayout>
