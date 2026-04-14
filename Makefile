@@ -43,6 +43,26 @@ check-%:
 		echo -e "$(ERROR_COLOR)$(KO)$(NO_COLOR) $*"; \
 	fi
 
+##@ Development
+
 .PHONY: clean
 clean: ## Clean project
 	@echo -e "$(INFO)$(INFO_COLOR)[Clean] Processing $(NO_COLOR)"
+
+##@ Website
+
+.PHONY: website-install
+website-install: ## Install website dependencies
+	bun install
+
+.PHONY: website-dev
+website-dev: ## Start the website development server
+	bun run dev
+
+.PHONY: website-build
+website-build: ## Build the website for production
+	bun run build
+
+.PHONY: website-preview
+website-preview: ## Preview the production website build
+	bun run preview

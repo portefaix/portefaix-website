@@ -4,99 +4,178 @@
 
 import DocsLayout from "../../../layouts/DocsLayout.astro";
 
-const components = [
+const layers = [
   {
-    category: "Infrastructure as Code",
-    color: "#34d399",
+    id: "gitops",
+    category: "GitOps Foundation",
+    color: "#2563eb",
+    description: "Declarative delivery engine and progressive rollout controllers. All platform state is reconciled from Git.",
     items: [
-      { name: "Terraform", role: "Cloud resource provisioning", url: "https://www.terraform.io" },
-      { name: "Crossplane", role: "Kubernetes-native infrastructure management", url: "https://crossplane.io" },
-      { name: "Cluster API", role: "Declarative cluster lifecycle management", url: "https://cluster-api.sigs.k8s.io" },
+      { name: "ArgoCD",         role: "GitOps engine — application delivery and cluster sync",           url: "https://argo-cd.readthedocs.io" },
+      { name: "Argo Workflows", role: "Kubernetes-native DAG workflow engine for CI pipelines",          url: "https://argoproj.github.io/workflows/" },
+      { name: "Argo Rollouts",  role: "Progressive delivery — canary, blue/green, analysis",            url: "https://argoproj.github.io/argo-rollouts/" },
+      { name: "Argo Events",    role: "Event-driven automation and sensor-based triggers",               url: "https://argoproj.github.io/argo-events/" },
+      { name: "Kargo",          role: "Environment promotion workflows across staging and production",   url: "https://kargo.akuity.io" },
     ],
   },
   {
-    category: "GitOps",
-    color: "#818cf8",
-    items: [
-      { name: "ArgoCD", role: "Application delivery and sync", url: "https://argo-cd.readthedocs.io" },
-      { name: "FluxCD (deprecated in v2.0.0)", role: "Infrastructure reconciliation and image automation — replaced by ArgoCD", url: "https://fluxcd.io" },
-      { name: "Argo Rollouts", role: "Progressive delivery (canary, blue-green)", url: "https://argoproj.github.io/argo-rollouts/" },
-      { name: "Argo Workflows", role: "Kubernetes-native workflow engine", url: "https://argoproj.github.io/workflows/" },
-    ],
-  },
-  {
-    category: "Observability",
-    color: "#f472b6",
-    items: [
-      { name: "Grafana", role: "Metrics and log dashboards", url: "https://grafana.com" },
-      { name: "Prometheus", role: "Metrics collection and alerting", url: "https://prometheus.io" },
-      { name: "Loki", role: "Log aggregation", url: "https://grafana.com/oss/loki/" },
-      { name: "Tempo", role: "Distributed tracing", url: "https://grafana.com/oss/tempo/" },
-      { name: "Mimir", role: "Long-term Prometheus metrics storage", url: "https://grafana.com/oss/mimir/" },
-      { name: "Alloy", role: "OpenTelemetry-native collector (Grafana Agent successor)", url: "https://grafana.com/oss/alloy/" },
-      { name: "OpenTelemetry Collector", role: "Vendor-neutral telemetry pipeline", url: "https://opentelemetry.io" },
-      { name: "kube-state-metrics", role: "Kubernetes object metrics", url: "https://github.com/kubernetes/kube-state-metrics" },
-    ],
-  },
-  {
-    category: "Security & Policy",
-    color: "#fb923c",
-    items: [
-      { name: "Validating Admission Policy (VAP)", role: "Kubernetes-native admission control with CEL expressions (GA in 1.30)", url: "https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/" },
-      { name: "Kyverno (deprecated v2.0.0)", role: "Deprecated — replaced by Kubernetes VAP + CEL", url: "https://kyverno.io" },
-      { name: "OPA / Gatekeeper (deprecated v2.0.0)", role: "Deprecated — replaced by Kubernetes VAP + CEL", url: "https://www.openpolicyagent.org" },
-      { name: "Falco", role: "Runtime security and threat detection", url: "https://falco.org" },
-      { name: "Trivy Operator", role: "Vulnerability and misconfiguration scanning", url: "https://github.com/aquasecurity/trivy-operator" },
-      { name: "cert-manager", role: "TLS certificate lifecycle management", url: "https://cert-manager.io" },
-      { name: "external-secrets", role: "Sync secrets from external stores (Vault, KMS, etc.)", url: "https://external-secrets.io" },
-    ],
-  },
-  {
+    id: "networking",
     category: "Networking",
-    color: "#818cf8",
+    color: "#0d9488",
+    description: "CNI, ingress, DNS, zero-trust access, and messaging. Cilium provides eBPF-accelerated networking and network policies.",
     items: [
-      { name: "Cilium", role: "eBPF-based CNI, network policies, and service mesh", url: "https://cilium.io" },
-      { name: "external-dns", role: "Automatic DNS record management", url: "https://github.com/kubernetes-sigs/external-dns" },
-      { name: "ingress-nginx", role: "Nginx-based Ingress controller", url: "https://kubernetes.github.io/ingress-nginx/" },
-      { name: "Gateway API", role: "Next-generation Ingress/routing API", url: "https://gateway-api.sigs.k8s.io" },
+      { name: "Cilium",             role: "eBPF-based CNI, network policies, Hubble observability",         url: "https://cilium.io",                                                                    ebpf: true },
+      { name: "Kubernetes Gateway", role: "Next-generation ingress and traffic routing (Gateway API)",       url: "https://gateway-api.sigs.k8s.io" },
+      { name: "Envoy Gateway",      role: "Envoy-based Gateway API implementation",                         url: "https://gateway.envoyproxy.io" },
+      { name: "cert-manager",       role: "Automated TLS certificate lifecycle (Let's Encrypt, ACME)",      url: "https://cert-manager.io" },
+      { name: "external-dns",       role: "Automatic DNS record management from Kubernetes resources",      url: "https://github.com/kubernetes-sigs/external-dns" },
+      { name: "Cloudflare Tunnel",  role: "Zero-trust inbound connectivity without opening firewall ports", url: "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/" },
+      { name: "NATS",               role: "Cloud-native messaging and event streaming",                     url: "https://nats.io" },
     ],
   },
   {
-    category: "Storage & Backup",
-    color: "#34d399",
+    id: "security",
+    category: "Security",
+    color: "#ef4444",
+    description: "Identity, compliance, runtime security, secrets management, and supply-chain scanning.",
     items: [
-      { name: "Velero", role: "Cluster backup and disaster recovery", url: "https://velero.io" },
-      { name: "Rook-Ceph", role: "Cloud-native distributed storage (optional)", url: "https://rook.io" },
+      { name: "Authentik",        role: "Identity provider — SSO, OIDC, SAML, user lifecycle",              url: "https://goauthentik.io" },
+      { name: "Dex",              role: "Federated OIDC identity provider for Kubernetes API and apps",      url: "https://dexidp.io" },
+      { name: "kube-bench",       role: "CIS Kubernetes Benchmark compliance scanner",                       url: "https://github.com/aquasecurity/kube-bench" },
+      { name: "Tetragon",         role: "eBPF-based runtime security enforcement and observability",         url: "https://tetragon.io",                                                                  ebpf: true },
+      { name: "External Secrets", role: "Sync secrets from Vault, AWS SM, GCP SM into Kubernetes",          url: "https://external-secrets.io" },
+      { name: "Sealed Secrets",   role: "Encrypt secrets for safe GitOps storage",                          url: "https://sealed-secrets.netlify.app" },
+      { name: "Trivy Operator",   role: "Continuous vulnerability and misconfiguration scanning",           url: "https://github.com/aquasecurity/trivy-operator" },
+      { name: "SBOM Operator",    role: "Automated Software Bill of Materials generation per workload",      url: "https://github.com/ckotzbauer/sbom-operator" },
+      { name: "Paralus",          role: "Zero-trust Kubernetes access management and audit",                 url: "https://www.paralus.io" },
     ],
   },
   {
-    category: "Secrets",
-    color: "#f472b6",
+    id: "observability",
+    category: "Observability",
+    color: "#9333ea",
+    description: "Full-stack observability: metrics, logs, traces, continuous profiling, SLO management, and eBPF auto-instrumentation.",
     items: [
-      { name: "External Secrets Operator", role: "Sync secrets from external stores into Kubernetes", url: "https://external-secrets.io" },
-      { name: "Akeyless", role: "SaaS secrets management backend", url: "https://www.akeyless.io" },
-      { name: "Infisical", role: "Open-source secrets management backend", url: "https://infisical.com" },
-      { name: "AWS Secrets Manager", role: "AWS-native secrets backend", url: "https://aws.amazon.com/secrets-manager/" },
-      { name: "HashiCorp Vault", role: "Self-hosted secrets management backend (optional)", url: "https://www.vaultproject.io" },
+      { name: "Prometheus",             role: "Metrics collection, alerting rules, and recording rules",         url: "https://prometheus.io" },
+      { name: "Alertmanager",           role: "Alert routing, grouping, silencing, and notification dispatch",   url: "https://prometheus.io/docs/alerting/latest/alertmanager/" },
+      { name: "Mimir",                  role: "Horizontally scalable long-term Prometheus metrics storage",      url: "https://grafana.com/oss/mimir/" },
+      { name: "Grafana",                role: "Dashboards, data exploration, and alert visualisation",           url: "https://grafana.com" },
+      { name: "Grafana Operator",       role: "Kubernetes-native Grafana instance and dashboard management",     url: "https://github.com/grafana/grafana-operator" },
+      { name: "SignOz",                 role: "Open-source full-stack observability platform (APM alternative)", url: "https://signoz.io" },
+      { name: "Loki",                   role: "Log aggregation and LogQL query engine",                          url: "https://grafana.com/oss/loki/" },
+      { name: "Alloy",                  role: "OpenTelemetry-native collector (Grafana Agent successor)",        url: "https://grafana.com/oss/alloy/" },
+      { name: "Tempo",                  role: "Distributed tracing backend (Jaeger/Zipkin compatible)",          url: "https://grafana.com/oss/tempo/" },
+      { name: "Pyroscope",              role: "Continuous profiling — CPU, memory, goroutine profiles",          url: "https://grafana.com/oss/pyroscope/" },
+      { name: "Beyla",                  role: "eBPF auto-instrumentation — traces without code changes",         url: "https://grafana.com/oss/beyla/",                                                    ebpf: true },
+      { name: "OTel Operator",          role: "Kubernetes operator for OpenTelemetry Collector lifecycle",       url: "https://opentelemetry.io/docs/kubernetes/operator/" },
+      { name: "OTel Collector",         role: "Vendor-neutral telemetry pipeline (receive, process, export)",   url: "https://opentelemetry.io/docs/collector/" },
+      { name: "Pyrra",                  role: "SLO definition, burn-rate alerting, and error-budget tracking",   url: "https://github.com/pyrra-dev/pyrra" },
+      { name: "Sloth",                  role: "SLO-as-code generator for Prometheus recording and alert rules",  url: "https://sloth.dev" },
+    ],
+  },
+  {
+    id: "system",
+    category: "System & Data",
+    color: "#16a34a",
+    description: "Managed database operators, vector stores, event-driven autoscaling, persistent storage, and node lifecycle.",
+    items: [
+      { name: "CloudNativePG",  role: "PostgreSQL operator — HA clusters, streaming replication",              url: "https://cloudnative-pg.io" },
+      { name: "Dragonfly",      role: "Redis-compatible in-memory data store (high throughput)",               url: "https://www.dragonflydb.io" },
+      { name: "MariaDB",        role: "MariaDB operator for Kubernetes-managed SQL databases",                  url: "https://github.com/mariadb-operator/mariadb-operator" },
+      { name: "ClickHouse",     role: "Column-oriented OLAP database for analytics workloads",                 url: "https://clickhouse.com" },
+      { name: "Qdrant",         role: "Vector database for semantic search and AI embeddings",                  url: "https://qdrant.tech" },
+      { name: "Meilisearch",    role: "Fast full-text search engine with typo tolerance",                      url: "https://www.meilisearch.com" },
+      { name: "KEDA",           role: "Event-driven autoscaling based on external metrics (Kafka, queues…)",   url: "https://keda.sh" },
+      { name: "Karpenter",      role: "Just-in-time node provisioning based on pending pod requirements",      url: "https://karpenter.sh" },
+      { name: "VPA",            role: "Vertical Pod Autoscaler — right-size CPU/memory requests",              url: "https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler" },
+      { name: "Descheduler",    role: "Rebalance pod placement after scheduling constraints change",           url: "https://github.com/kubernetes-sigs/descheduler" },
+      { name: "Longhorn",       role: "Cloud-native distributed block storage for persistent volumes",         url: "https://longhorn.io" },
+      { name: "Kured",          role: "Automatic node reboot coordinator for kernel/OS updates",               url: "https://kured.dev" },
+    ],
+  },
+  {
+    id: "tools",
+    category: "Platform Tools",
+    color: "#ea580c",
+    description: "FinOps, internal developer portal, AI-powered diagnostics, and local LLM runtime.",
+    items: [
+      { name: "OpenCost",    role: "Real-time Kubernetes cost visibility and FinOps attribution",          url: "https://www.opencost.io" },
+      { name: "Homepage",    role: "Centralised service dashboard for platform teams",                     url: "https://gethomepage.dev" },
+      { name: "Port (IDP)",  role: "Internal Developer Portal — software catalog and self-service",        url: "https://www.getport.io" },
+      { name: "K8sGPT",      role: "AI-powered Kubernetes diagnostics and runbook suggestions",            url: "https://k8sgpt.ai" },
+      { name: "Ollama",      role: "Local LLM runtime for air-gapped or privacy-sensitive AI workloads",   url: "https://ollama.ai" },
+    ],
+  },
+  {
+    id: "chaos",
+    category: "Chaos Engineering",
+    color: "#e11d48",
+    description: "Controlled fault injection to validate platform resilience and test recovery procedures.",
+    items: [
+      { name: "Litmus Chaos", role: "Cloud-native chaos engineering platform with experiment hub",           url: "https://litmuschaos.io" },
+      { name: "Chaos Mesh",   role: "Kubernetes-native chaos experimentation with fine-grained fault types", url: "https://chaos-mesh.org" },
     ],
   },
 ];
 ---
 
-<DocsLayout title="Components" description="Full inventory of Portefaix platform components and their roles.">
+<DocsLayout title="Components" description="Full inventory of Portefaix platform components organised by architecture layer.">
   <p class="doc-eyebrow">// reference / components</p>
 
   <h1>Platform Components</h1>
 
   <p>
     Portefaix assembles a curated set of CNCF and open-source components into a coherent,
-    production-ready platform. Every component is selected for reliability, community backing,
-    and integration with the rest of the stack.
+    production-ready platform. Components are organised into seven architecture layers,
+    each with a distinct operational concern.
   </p>
 
-  {components.map((group) => (
+  <figure>
+    <div style="position: relative; cursor: zoom-in;" onclick="document.getElementById('arch-modal').showModal()">
+      <img
+        src="/diagrams/portefaix-architecture-flat-v2.svg"
+        alt="Portefaix Platform Architecture — seven layers: GitOps Foundation, Networking, Security, Observability, System & Data, Platform Tools, Chaos Engineering"
+        style="width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; display: block;"
+      />
+      <span style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.45); color: #fff; font-size: 0.72rem; padding: 3px 8px; border-radius: 4px; pointer-events: none;">
+        🔍 Click to zoom
+      </span>
+    </div>
+    <figcaption style="text-align: center; font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">
+      Portefaix Platform Architecture — 7 layers, 50+ components ·
+      <a href="/diagrams/portefaix-architecture-flat-v2.svg" target="_blank" rel="noopener" style="color: #2563eb;">View full size ↗</a>
+    </figcaption>
+  </figure>
+
+  <dialog
+    id="arch-modal"
+    style="max-width: 95vw; max-height: 95vh; padding: 0; border: none; border-radius: 10px; box-shadow: 0 24px 64px rgba(0,0,0,0.35); overflow: hidden; background: #fff;"
+  >
+    <div style="position: relative;">
+      <img
+        src="/diagrams/portefaix-architecture-flat-v2.svg"
+        alt="Portefaix Platform Architecture — full size"
+        style="width: 90vw; max-height: 90vh; object-fit: contain; display: block;"
+      />
+      <button
+        onclick="document.getElementById('arch-modal').close()"
+        aria-label="Close diagram"
+        style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.55); color: #fff; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+      >✕</button>
+    </div>
+  </dialog>
+
+  <script>
+    const modal = document.getElementById('arch-modal');
+    modal?.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+  </script>
+
+  {layers.map((layer) => (
     <>
-      <h2>{group.category}</h2>
+      <h2 style={`border-left: 4px solid ${layer.color}; padding-left: 0.75rem;`}>
+        {layer.category}
+      </h2>
+      <p style="color: #6b7280; font-size: 0.95rem; margin-top: -0.5rem;">{layer.description}</p>
       <table>
         <thead>
           <tr>
@@ -105,10 +184,13 @@ const components = [
           </tr>
         </thead>
         <tbody>
-          {group.items.map((item) => (
+          {layer.items.map((item) => (
             <tr>
               <td>
                 <a href={item.url} target="_blank" rel="noopener"><strong>{item.name}</strong></a>
+                {item.ebpf && (
+                  <span style="margin-left: 0.4rem; font-size: 0.7rem; font-weight: 600; background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; border-radius: 4px; padding: 1px 5px;">eBPF</span>
+                )}
               </td>
               <td>{item.role}</td>
             </tr>

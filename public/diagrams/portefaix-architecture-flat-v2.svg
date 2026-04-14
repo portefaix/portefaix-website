@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1050" width="1200" height="1050">
+<style>text { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }</style>
+<defs>
+  <marker id="arr-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+  </marker>
+  <marker id="arr-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#0d9488"/>
+  </marker>
+  <marker id="arr-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+  </marker>
+  <marker id="arr-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/>
+  </marker>
+  <marker id="arr-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+  </marker>
+  <marker id="arr-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/>
+  </marker>
+  <marker id="arr-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#e11d48"/>
+  </marker>
+</defs>
+<rect width="1200" height="1050" fill="#f8fafc"/>
+<text x="24" y="40" text-anchor="start" fill="#111827" font-size="26" font-weight="600">Portefaix Platform</text>
+<text x="24" y="60" text-anchor="start" fill="#6b7280" font-size="13" font-weight="normal">Cloud-Native Kubernetes  ·  GitOps  ·  eBPF  ·  Multi-Cloud</text>
+<line x1="20" y1="72" x2="1180" y2="72" stroke="#e5e7eb" stroke-width="1"/>
+<rect x="840" y="16" width="108" height="28" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="894" y="34" text-anchor="middle" fill="#1d4ed8" font-size="11" font-weight="600">CNCF Stack</text>
+<rect x="956" y="16" width="66" height="28" rx="6" fill="#fff7ed" stroke="#fdba74" stroke-width="1.5"/>
+<text x="989" y="34" text-anchor="middle" fill="#c2410c" font-size="11" font-weight="600">eBPF</text>
+<rect x="1030" y="16" width="130" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+<text x="1095" y="34" text-anchor="middle" fill="#166534" font-size="11" font-weight="600">Multi-Cloud</text>
+<rect x="20" y="80" width="1160" height="72" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+<path d="M 32,80 L 1168,80 Q 1180,80 1180,92 L 1180,106 L 20,106 L 20,92 Q 20,80 32,80 Z" fill="#2563eb"/>
+<rect x="28" y="86" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="97" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">GitOps Foundation</text>
+<rect x="311" y="117" width="110" height="24" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="366" y="133" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">ArgoCD</text>
+<rect x="429" y="117" width="110" height="24" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="484" y="133" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Argo Workflows</text>
+<rect x="547" y="117" width="110" height="24" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="602" y="133" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Argo Rollouts</text>
+<rect x="665" y="117" width="110" height="24" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="720" y="133" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Argo Events</text>
+<rect x="783" y="117" width="110" height="24" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="838" y="133" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Kargo</text>
+<line x1="440" y1="154" x2="440" y2="167" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)" stroke-dasharray="5,3"/>
+<line x1="600" y1="154" x2="600" y2="167" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)" stroke-dasharray="5,3"/>
+<line x1="760" y1="154" x2="760" y2="167" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)" stroke-dasharray="5,3"/>
+<rect x="20" y="170" width="1160" height="128" rx="12" fill="#f0fdfa" stroke="#5eead4" stroke-width="2"/>
+<path d="M 32,170 L 1168,170 Q 1180,170 1180,182 L 1180,196 L 20,196 L 20,182 Q 20,170 32,170 Z" fill="#0d9488"/>
+<rect x="28" y="176" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="187" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">Networking</text>
+<text x="28" y="216" text-anchor="start" fill="#0f766e" font-size="9" font-weight="normal">Ingress · Gateway · DNS</text>
+<rect x="28" y="220" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#f97316" stroke-width="1.5"/>
+<text x="81" y="236" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Cilium</text>
+<rect x="142" y="220" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+<text x="195" y="236" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">K-Gateway</text>
+<rect x="256" y="220" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+<text x="309" y="236" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Envoy GW</text>
+<rect x="370" y="220" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+<text x="423" y="236" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Cert-Mgr</text>
+<rect x="484" y="220" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+<text x="537" y="236" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Ext-DNS</text>
+<text x="28" y="264" text-anchor="start" fill="#0f766e" font-size="9" font-weight="normal">Zero-Trust Access · Messaging</text>
+<rect x="28" y="268" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+<text x="81" y="284" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">CF-Tunnel</text>
+<rect x="142" y="268" width="106" height="24" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+<text x="195" y="284" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">NATS</text>
+<line x1="440" y1="300" x2="440" y2="313" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+<line x1="600" y1="300" x2="600" y2="313" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+<line x1="760" y1="300" x2="760" y2="313" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+<rect x="20" y="316" width="1160" height="128" rx="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+<path d="M 32,316 L 1168,316 Q 1180,316 1180,328 L 1180,342 L 20,342 L 20,328 Q 20,316 32,316 Z" fill="#ef4444"/>
+<rect x="28" y="322" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="333" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">Security</text>
+<text x="28" y="362" text-anchor="start" fill="#b91c1c" font-size="9" font-weight="normal">Identity</text>
+<text x="276" y="362" text-anchor="start" fill="#b91c1c" font-size="9" font-weight="normal">Access Control</text>
+<rect x="28" y="366" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="81" y="382" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Authentik</text>
+<rect x="142" y="366" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="195" y="382" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Dex</text>
+<rect x="276" y="366" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="329" y="382" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Kube-Bench</text>
+<rect x="390" y="366" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f97316" stroke-width="1.5"/>
+<text x="443" y="382" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Tetragon</text>
+<line x1="260" y1="362" x2="260" y2="390" stroke="#e5e7eb" stroke-width="1"/>
+<text x="28" y="410" text-anchor="start" fill="#b91c1c" font-size="9" font-weight="normal">Secrets</text>
+<text x="276" y="410" text-anchor="start" fill="#b91c1c" font-size="9" font-weight="normal">Scanning · Zero-Trust</text>
+<rect x="28" y="414" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="81" y="430" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Ext-Secrets</text>
+<rect x="142" y="414" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="195" y="430" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Sealed Secrets</text>
+<rect x="276" y="414" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="329" y="430" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Trivy Operator</text>
+<rect x="390" y="414" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="443" y="430" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">SBOM Operator</text>
+<rect x="504" y="414" width="106" height="24" rx="8" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+<text x="557" y="430" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Paralus</text>
+<line x1="260" y1="410" x2="260" y2="438" stroke="#e5e7eb" stroke-width="1"/>
+<line x1="440" y1="446" x2="440" y2="459" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr-red)"/>
+<line x1="600" y1="446" x2="600" y2="459" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr-red)"/>
+<line x1="760" y1="446" x2="760" y2="459" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr-red)"/>
+<rect x="20" y="462" width="1160" height="176" rx="12" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2"/>
+<path d="M 32,462 L 1168,462 Q 1180,462 1180,474 L 1180,488 L 20,488 L 20,474 Q 20,462 32,462 Z" fill="#9333ea"/>
+<rect x="28" y="468" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="479" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">Observability</text>
+<text x="28" y="508" text-anchor="start" fill="#7e22ce" font-size="9" font-weight="normal">Metrics · Visualization</text>
+<rect x="28" y="512" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="81" y="528" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Prometheus</text>
+<rect x="142" y="512" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="195" y="528" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Alertmanager</text>
+<rect x="256" y="512" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="309" y="528" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Mimir</text>
+<rect x="370" y="512" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="423" y="528" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Grafana</text>
+<rect x="484" y="512" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="537" y="528" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Grafana-Op</text>
+<rect x="598" y="512" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="651" y="528" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">SignOz</text>
+<text x="28" y="556" text-anchor="start" fill="#7e22ce" font-size="9" font-weight="normal">Logging · Tracing · Profiling</text>
+<rect x="28" y="560" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="81" y="576" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Loki</text>
+<rect x="142" y="560" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="195" y="576" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Alloy</text>
+<rect x="256" y="560" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="309" y="576" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Tempo</text>
+<rect x="370" y="560" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="423" y="576" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Pyroscope</text>
+<rect x="484" y="560" width="106" height="24" rx="8" fill="#ede9fe" stroke="#f97316" stroke-width="1.5"/>
+<text x="537" y="576" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Beyla</text>
+<text x="28" y="604" text-anchor="start" fill="#7e22ce" font-size="9" font-weight="normal">OpenTelemetry · SLO</text>
+<rect x="28" y="608" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="81" y="624" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">OTel-Operator</text>
+<rect x="142" y="608" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="195" y="624" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">OTel-Collector</text>
+<rect x="256" y="608" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="309" y="624" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Pyrra</text>
+<rect x="370" y="608" width="106" height="24" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="423" y="624" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Sloth</text>
+<line x1="440" y1="640" x2="440" y2="653" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<line x1="600" y1="640" x2="600" y2="653" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<line x1="760" y1="640" x2="760" y2="653" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<rect x="20" y="656" width="1160" height="128" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+<path d="M 32,656 L 1168,656 Q 1180,656 1180,668 L 1180,682 L 20,682 L 20,668 Q 20,656 32,656 Z" fill="#16a34a"/>
+<rect x="28" y="662" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="673" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">System &amp; Data</text>
+<text x="28" y="702" text-anchor="start" fill="#166534" font-size="9" font-weight="normal">Databases · Search · Vector</text>
+<rect x="28" y="706" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="81" y="722" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">CloudNativePG</text>
+<rect x="142" y="706" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="195" y="722" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Dragonfly</text>
+<rect x="256" y="706" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="309" y="722" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">MariaDB</text>
+<rect x="370" y="706" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="423" y="722" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">ClickHouse</text>
+<rect x="484" y="706" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="537" y="722" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Qdrant</text>
+<rect x="598" y="706" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="651" y="722" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Meilisearch</text>
+<text x="28" y="750" text-anchor="start" fill="#166534" font-size="9" font-weight="normal">Scaling · Storage · Backup</text>
+<rect x="28" y="754" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="81" y="770" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">KEDA</text>
+<rect x="142" y="754" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="195" y="770" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Karpenter</text>
+<rect x="256" y="754" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="309" y="770" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">VPA</text>
+<rect x="370" y="754" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="423" y="770" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Descheduler</text>
+<rect x="484" y="754" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="537" y="770" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Longhorn</text>
+<rect x="598" y="754" width="106" height="24" rx="8" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+<text x="651" y="770" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Kured</text>
+<line x1="440" y1="786" x2="440" y2="799" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<line x1="600" y1="786" x2="600" y2="799" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<line x1="760" y1="786" x2="760" y2="799" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<rect x="20" y="802" width="1160" height="72" rx="12" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+<path d="M 32,802 L 1168,802 Q 1180,802 1180,814 L 1180,828 L 20,828 L 20,814 Q 20,802 32,802 Z" fill="#ea580c"/>
+<rect x="28" y="808" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="819" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">Platform Tools</text>
+<rect x="28" y="839" width="106" height="24" rx="8" fill="#fed7aa" stroke="#fb923c" stroke-width="1.5"/>
+<text x="81" y="855" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">OpenCost</text>
+<rect x="142" y="839" width="106" height="24" rx="8" fill="#fed7aa" stroke="#fb923c" stroke-width="1.5"/>
+<text x="195" y="855" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Homepage</text>
+<rect x="256" y="839" width="106" height="24" rx="8" fill="#fed7aa" stroke="#fb923c" stroke-width="1.5"/>
+<text x="309" y="855" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Port (IDP)</text>
+<rect x="370" y="839" width="106" height="24" rx="8" fill="#fed7aa" stroke="#fb923c" stroke-width="1.5"/>
+<text x="423" y="855" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">K8sGPT</text>
+<rect x="484" y="839" width="106" height="24" rx="8" fill="#fed7aa" stroke="#fb923c" stroke-width="1.5"/>
+<text x="537" y="855" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Ollama</text>
+<line x1="440" y1="876" x2="440" y2="889" stroke="#ea580c" stroke-width="1.5" marker-end="url(#arr-orange)"/>
+<line x1="600" y1="876" x2="600" y2="889" stroke="#ea580c" stroke-width="1.5" marker-end="url(#arr-orange)"/>
+<line x1="760" y1="876" x2="760" y2="889" stroke="#ea580c" stroke-width="1.5" marker-end="url(#arr-orange)"/>
+<rect x="20" y="892" width="1160" height="72" rx="12" fill="#fff1f2" stroke="#fda4af" stroke-width="2"/>
+<path d="M 32,892 L 1168,892 Q 1180,892 1180,904 L 1180,918 L 20,918 L 20,904 Q 20,892 32,892 Z" fill="#e11d48"/>
+<rect x="28" y="898" width="14" height="14" rx="3" fill="#ffffff" opacity="0.25"/>
+<text x="50" y="909" text-anchor="start" fill="#ffffff" font-size="11" font-weight="600">Chaos Engineering</text>
+<rect x="487" y="929" width="106" height="24" rx="8" fill="#ffe4e6" stroke="#fb7185" stroke-width="1.5"/>
+<text x="540" y="945" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Litmus Chaos</text>
+<rect x="607" y="929" width="106" height="24" rx="8" fill="#ffe4e6" stroke="#fb7185" stroke-width="1.5"/>
+<text x="660" y="945" text-anchor="middle" fill="#374151" font-size="10" font-weight="normal">Chaos Mesh</text>
+<rect x="20" y="980" width="580" height="58" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+<text x="32" y="996" text-anchor="start" fill="#374151" font-size="10" font-weight="600">Legend</text>
+<line x1="32" y1="1014" x2="60" y2="1014" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)" stroke-dasharray="5,3"/>
+<text x="66" y="1018" text-anchor="start" fill="#6b7280" font-size="9" font-weight="normal">GitOps sync</text>
+<line x1="170" y1="1014" x2="198" y2="1014" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+<text x="204" y="1018" text-anchor="start" fill="#6b7280" font-size="9" font-weight="normal">Network flow</text>
+<line x1="300" y1="1014" x2="328" y2="1014" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<text x="334" y="1018" text-anchor="start" fill="#6b7280" font-size="9" font-weight="normal">Telemetry flow</text>
+<line x1="430" y1="1014" x2="458" y2="1014" stroke="#e11d48" stroke-width="1.5" marker-end="url(#arr-rose)"/>
+<text x="464" y="1018" text-anchor="start" fill="#6b7280" font-size="9" font-weight="normal">Chaos injection</text>
+<rect x="32" y="1024" width="106" height="8" rx="4" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/>
+<text x="140" y="1032" text-anchor="start" fill="#6b7280" font-size="9" font-weight="normal">= eBPF kernel-instrumented component</text>
+<rect x="720" y="980" width="460" height="58" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+<text x="950" y="1002" text-anchor="middle" fill="#111827" font-size="15" font-weight="600">Portefaix Platform</text>
+<text x="950" y="1020" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="normal">GitOps · eBPF · CNCF · Multi-Cloud</text>
+<text x="950" y="1036" text-anchor="middle" fill="#9ca3af" font-size="10" font-weight="normal">v1.0  ·  2026  ·  Apache 2.0</text>
+</svg>
