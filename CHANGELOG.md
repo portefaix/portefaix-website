@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/portefaix/portefaix-website/compare/v1.0.1...v1.1.0) (2026-04-14)
+
+
+### 🚀 Features
+
+* **docs:** add platform architecture diagram and update components reference ([#29](https://github.com/portefaix/portefaix-website/issues/29)) ([4521974](https://github.com/portefaix/portefaix-website/commit/4521974aec0d906f10328e83341f8cacc41b459f))
+
 ## [1.0.1](https://github.com/portefaix/portefaix-website/compare/v1.0.0...v1.0.1) (2026-04-13)
 
 
