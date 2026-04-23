@@ -114,9 +114,9 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
 
         <!-- Logo / back to home -->
         <a href="/" class="sidebar-logo" aria-label="Back to Portefaix home">
-          <svg class="logo-hex" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.5" aria-hidden="true">
+          <svg class="logo-hex" viewBox="0 0 24 24" fill="none" stroke="#2db87e" stroke-width="1.5" aria-hidden="true">
             <polygon points="12,2 21,7 21,17 12,22 3,17 3,7"/>
-            <circle cx="12" cy="12" r="2" fill="#0284c7" stroke="none"/>
+            <circle cx="12" cy="12" r="2" fill="#2db87e" stroke="none"/>
           </svg>
           <span class="logo-name">Portefaix</span>
           <span class="logo-tag">docs</span>
@@ -195,14 +195,14 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
         </svg>
       </label>
       <a href="/" class="flex items-center gap-2.5" aria-label="Portefaix">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.5" style="width:18px;height:18px;" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2db87e" stroke-width="1.5" style="width:18px;height:18px;" aria-hidden="true">
           <polygon points="12,2 21,7 21,17 12,22 3,17 3,7"/>
-          <circle cx="12" cy="12" r="2" fill="#0284c7" stroke="none"/>
+          <circle cx="12" cy="12" r="2" fill="#2db87e" stroke="none"/>
         </svg>
         <span class="logo-name">Portefaix</span>
         <span class="logo-tag">docs</span>
       </a>
-      <a href="https://github.com/portefaix" target="_blank" rel="noopener noreferrer" class="sidebar-gh" style="color:#0284c7;">
+      <a href="https://github.com/portefaix" target="_blank" rel="noopener noreferrer" class="sidebar-gh" style="color:#2db87e;">
         <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
         </svg>
@@ -261,7 +261,7 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
   background: #ffffff;
   z-index: 40;
   scrollbar-width: thin;
-  scrollbar-color: rgba(14, 165, 233, 0.2) transparent;
+  scrollbar-color: rgba(62, 200, 147, 0.2) transparent;
 }
 
 .sidebar-inner {
@@ -290,9 +290,9 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
   font-family: var(--font-m);
   font-size: 0.58rem;
   letter-spacing: 0.1em;
-  color: #0284c7;
+  color: #2db87e;
   padding: 1px 7px;
-  border: 1px solid rgba(2, 132, 199, 0.3);
+  border: 1px solid rgba(45, 184, 126, 0.3);
   border-radius: 100px;
   margin-top: 2px;
 }
@@ -323,11 +323,11 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
   transition: background 0.2s, color 0.2s;
 }
 
-.nav-link:hover { background: rgba(14, 165, 233, 0.06); color: var(--t1); }
+.nav-link:hover { background: rgba(62, 200, 147, 0.06); color: var(--t1); }
 
 .nav-link--active {
-  background: rgba(14, 165, 233, 0.1);
-  color: #0284c7;
+  background: rgba(62, 200, 147, 0.1);
+  color: #2db87e;
   font-weight: 600;
 }
 
@@ -380,7 +380,7 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
   transition: background 0.2s, color 0.2s;
 }
 
-.mobile-menu-btn:hover { background: rgba(14, 165, 233, 0.08); color: var(--t1); }
+.mobile-menu-btn:hover { background: rgba(62, 200, 147, 0.08); color: var(--t1); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
@@ -441,7 +441,7 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
 }
 
 .doc-article :global(a) {
-  color: #0284c7;
+  color: #2db87e;
   text-decoration: underline;
   text-underline-offset: 3px;
   transition: opacity 0.2s;
@@ -463,11 +463,11 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
 .doc-article :global(code) {
   font-family: var(--font-m);
   font-size: 0.82rem;
-  background: rgba(14, 165, 233, 0.08);
-  border: 1px solid rgba(14, 165, 233, 0.18);
+  background: rgba(62, 200, 147, 0.08);
+  border: 1px solid rgba(62, 200, 147, 0.18);
   border-radius: 4px;
   padding: 1px 6px;
-  color: #0284c7;
+  color: #2db87e;
 }
 
 .doc-article :global(pre) {
@@ -577,8 +577,8 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
 }
 
 .doc-pag-link:hover {
-  border-color: rgba(14, 165, 233, 0.4);
-  background: rgba(14, 165, 233, 0.04);
+  border-color: rgba(62, 200, 147, 0.4);
+  background: rgba(62, 200, 147, 0.04);
 }
 
 .doc-pag-next { text-align: right; }
@@ -587,7 +587,7 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
   font-family: var(--font-m);
   font-size: 0.6rem;
   letter-spacing: 0.1em;
-  color: #0284c7;
+  color: #2db87e;
   text-transform: uppercase;
 }
 
@@ -602,27 +602,27 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
 
 /* ── Dark mode overrides ──────────────────────── */
 :global([data-theme="dark"]) .docs-sidebar {
-  background: rgba(10, 11, 14, 0.95);
-  border-color: rgba(14, 165, 233, 0.1);
+  background: rgba(18, 20, 24, 0.97);
+  border-color: rgba(62, 200, 147, 0.1);
 }
 
 :global([data-theme="dark"]) .docs-mobile-header {
-  background: rgba(10, 11, 14, 0.92);
+  background: rgba(18, 20, 24, 0.94);
 }
 
 :global([data-theme="dark"]) .nav-link:hover {
-  background: rgba(14, 165, 233, 0.08);
+  background: rgba(62, 200, 147, 0.08);
 }
 
 :global([data-theme="dark"]) .nav-link--active {
-  background: rgba(14, 165, 233, 0.12);
-  color: #0ea5e9;
+  background: rgba(62, 200, 147, 0.12);
+  color: #3EC893;
 }
 
 :global([data-theme="dark"]) .doc-article :global(code) {
-  background: rgba(14, 165, 233, 0.1);
-  border-color: rgba(14, 165, 233, 0.2);
-  color: #38bdf8;
+  background: rgba(62, 200, 147, 0.1);
+  border-color: rgba(62, 200, 147, 0.2);
+  color: #3EC893;
 }
 
 :global([data-theme="dark"]) .doc-article :global(pre) {
@@ -631,8 +631,8 @@ const nextPage = currentIdx < allPages.length - 1 ? allPages[currentIdx + 1] : n
 }
 
 :global([data-theme="dark"]) .doc-pag-link:hover {
-  border-color: rgba(14, 165, 233, 0.4);
-  background: rgba(14, 165, 233, 0.06);
+  border-color: rgba(62, 200, 147, 0.4);
+  background: rgba(62, 200, 147, 0.06);
 }
 
 /* ── Mobile layout ────────────────────────────── */
