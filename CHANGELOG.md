@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/portefaix/portefaix-website/compare/v1.0.1...v1.1.0) (2026-04-23)
+
+
+### 🚀 Features
+
+* **design:** apply devops-graphite theme replacing sky-blue with emerald ([#32](https://github.com/portefaix/portefaix-website/issues/32)) ([c1fd80d](https://github.com/portefaix/portefaix-website/commit/c1fd80d70f630103ecce9a1e438ab1e7d18b9c01))
+* **docs:** add platform architecture diagram and update components reference ([#29](https://github.com/portefaix/portefaix-website/issues/29)) ([4521974](https://github.com/portefaix/portefaix-website/commit/4521974aec0d906f10328e83341f8cacc41b459f))
+
 ## [1.0.1](https://github.com/portefaix/portefaix-website/compare/v1.0.0...v1.0.1) (2026-04-13)
 
 
